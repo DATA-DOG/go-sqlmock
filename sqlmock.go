@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 var mock *mockDriver
@@ -35,10 +36,17 @@ type conn struct {
 	active       expectation
 }
 
+func stripQuery(q string) (s string) {
+	s = strings.Replace(q, "\n", " ", -1)
+	s = strings.Replace(s, "\r", "", -1)
+	s = strings.TrimSpace(s)
+	return
+}
+
 func (c *conn) Close() (err error) {
 	for _, e := range mock.conn.expectations {
 		if !e.fulfilled() {
-			err = errors.New(fmt.Sprintf("There is expectation %+v which was not matched yet", e))
+			err = errors.New(fmt.Sprintf("There is a remaining expectation %T which was not matched yet", e))
 			break
 		}
 	}
@@ -81,7 +89,7 @@ func (c *conn) Begin() (driver.Tx, error) {
 
 	etb, ok := e.(*expectedBegin)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Call to Begin transaction, was not expected, next expectation is %v", e))
+		return nil, errors.New(fmt.Sprintf("Call to Begin transaction, was not expected, next expectation is %+v", e))
 	}
 	etb.triggered = true
 	return &transaction{c}, etb.err
@@ -99,13 +107,14 @@ func (c *conn) next() (e expectation) {
 
 func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	e := c.next()
+	query = stripQuery(query)
 	if e == nil {
-		return nil, errors.New(fmt.Sprintf("All expectations were already fulfilled, call to Exec '%s' query with args [%v] was not expected", query, args))
+		return nil, errors.New(fmt.Sprintf("All expectations were already fulfilled, call to Exec '%s' query with args %+v was not expected", query, args))
 	}
 
 	eq, ok := e.(*expectedExec)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Call to Exec query '%s' with args [%v], was not expected, next expectation is %v", query, args, e))
+		return nil, errors.New(fmt.Sprintf("Call to Exec query '%s' with args %+v, was not expected, next expectation is %+v", query, args, e))
 	}
 
 	eq.triggered = true
@@ -114,15 +123,15 @@ func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	}
 
 	if eq.result == nil {
-		return nil, errors.New(fmt.Sprintf("Exec query '%s' with args [%v], must return a database/sql/driver.Result, but it was not set for expectation %v", query, args, eq))
+		return nil, errors.New(fmt.Sprintf("Exec query '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %+v", query, args, eq))
 	}
 
 	if !eq.queryMatches(query) {
-		return nil, errors.New(fmt.Sprintf("Exec query '%s', does not match regex [%s]", query, eq.sqlRegex.String()))
+		return nil, errors.New(fmt.Sprintf("Exec query '%s', does not match regex '%s'", query, eq.sqlRegex.String()))
 	}
 
 	if !eq.argsMatches(args) {
-		return nil, errors.New(fmt.Sprintf("Exec query '%s', args [%v] does not match expected [%v]", query, args, eq.args))
+		return nil, errors.New(fmt.Sprintf("Exec query '%s', args %+v does not match expected %+v", query, args, eq.args))
 	}
 
 	return eq.result, nil
@@ -162,7 +171,7 @@ func (c *conn) WithArgs(args ...driver.Value) Mock {
 func (c *conn) WillReturnResult(result driver.Result) Mock {
 	eq, ok := c.active.(*expectedExec)
 	if !ok {
-		panic(fmt.Sprintf("driver.Result may be returned only by Exec expectations, current is %v", c.active))
+		panic(fmt.Sprintf("driver.Result may be returned only by Exec expectations, current is %+v", c.active))
 	}
 	eq.result = result
 	return c
@@ -171,25 +180,26 @@ func (c *conn) WillReturnResult(result driver.Result) Mock {
 func (c *conn) WillReturnRows(rows driver.Rows) Mock {
 	eq, ok := c.active.(*expectedQuery)
 	if !ok {
-		panic(fmt.Sprintf("driver.Rows may be returned only by Query expectations, current is %v", c.active))
+		panic(fmt.Sprintf("driver.Rows may be returned only by Query expectations, current is %+v", c.active))
 	}
 	eq.rows = rows
 	return c
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
-	return &statement{c, query}, nil
+	return &statement{mock.conn, stripQuery(query)}, nil
 }
 
 func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	e := c.next()
+	query = stripQuery(query)
 	if e == nil {
-		return nil, errors.New(fmt.Sprintf("All expectations were already fulfilled, call to Query '%s' with args [%v] was not expected", query, args))
+		return nil, errors.New(fmt.Sprintf("All expectations were already fulfilled, call to Query '%s' with args %+v was not expected", query, args))
 	}
 
 	eq, ok := e.(*expectedQuery)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Call to Query '%s' with args [%v], was not expected, next expectation is %v", query, args, e))
+		return nil, errors.New(fmt.Sprintf("Call to Query '%s' with args %+v, was not expected, next expectation is %+v", query, args, e))
 	}
 
 	eq.triggered = true
@@ -198,7 +208,7 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	}
 
 	if eq.rows == nil {
-		return nil, errors.New(fmt.Sprintf("Query '%s' with args [%v], must return a database/sql/driver.Rows, but it was not set for expectation %v", query, args, eq))
+		return nil, errors.New(fmt.Sprintf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %+v", query, args, eq))
 	}
 
 	if !eq.queryMatches(query) {
@@ -206,7 +216,7 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	}
 
 	if !eq.argsMatches(args) {
-		return nil, errors.New(fmt.Sprintf("Query '%s', args [%v] does not match expected [%v]", query, args, eq.args))
+		return nil, errors.New(fmt.Sprintf("Query '%s', args %+v does not match expected %+v", query, args, eq.args))
 	}
 
 	return eq.rows, nil

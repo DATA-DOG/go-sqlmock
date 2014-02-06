@@ -41,9 +41,9 @@ func (e *queryBasedExpectation) argsMatches(args []driver.Value) bool {
 	if len(args) != len(e.args) {
 		return false
 	}
-	for k, v := range e.args {
+	for k, v := range args {
 		vi := reflect.ValueOf(v)
-		ai := reflect.ValueOf(args[k])
+		ai := reflect.ValueOf(e.args[k])
 		switch vi.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if vi.Int() != ai.Int() {

@@ -54,7 +54,7 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 		row := make([]driver.Value, len(columns))
 		for i, v := range r {
 			v := strings.TrimSpace(v)
-			row[i] = v
+			row[i] = []byte(v)
 		}
 		rs.rows = append(rs.rows, row)
 	}

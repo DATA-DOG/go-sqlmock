@@ -10,7 +10,6 @@ type statement struct {
 }
 
 func (stmt *statement) Close() error {
-	stmt.conn = nil
 	return nil
 }
 

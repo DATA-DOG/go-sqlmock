@@ -6,11 +6,11 @@ triggered should be mocked in order to pass a test.
 
 ## Install
 
-    go get github.com/l3pp4rd/go-sqlmock
+    go get github.com/DATA-DOG/go-sqlmock
 
 ## Use it with pleasure
 
-An example of some database interaction which you want to test:
+An example of some database interaction which you may want to test:
 
 ``` go
 package main
@@ -142,7 +142,7 @@ package main
 
 import (
     "database/sql"
-    "github.com/l3pp4rd/go-sqlmock"
+    "github.com/DATA-DOG/go-sqlmock"
     "testing"
     "fmt"
 )
@@ -292,7 +292,9 @@ to compare them correctly, this may be improved.
 
 ## Contributions
 
-Feel free to open a pull request.
+Feel free to open a pull request. Note, if you wish to contribute an extension to public (exported methods or types) -
+please open an issue before, to discuss whether these changes can be accepted. All backward incompatible changes are
+and will be treated cautiously
 
 ## License
 

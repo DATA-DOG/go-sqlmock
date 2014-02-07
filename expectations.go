@@ -6,13 +6,14 @@ import (
 	"regexp"
 )
 
+// an expectation interface
 type expectation interface {
 	fulfilled() bool
 	setError(err error)
 }
 
-// common expectation
-
+// common expectation struct
+// satisfies the expectation interface
 type commonExpectation struct {
 	triggered bool
 	err       error
@@ -27,6 +28,7 @@ func (e *commonExpectation) setError(err error) {
 }
 
 // query based expectation
+// adds a query matching logic
 type queryBasedExpectation struct {
 	commonExpectation
 	sqlRegex *regexp.Regexp
@@ -99,3 +101,4 @@ type expectedExec struct {
 
 	result driver.Result
 }
+

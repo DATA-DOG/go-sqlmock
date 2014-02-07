@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// a struct which implements database/sql/driver.Rows
 type rows struct {
 	cols []string
 	rows [][]driver.Value
@@ -25,6 +26,7 @@ func (r *rows) Err() error {
 	return nil
 }
 
+// advances to next row
 func (r *rows) Next(dest []driver.Value) error {
 	r.pos++
 	if r.pos > len(r.rows) {
@@ -38,6 +40,8 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
+// create rows from a csv string
+// to be used for mocked queries
 func RowsFromCSVString(columns []string, s string) driver.Rows {
 	rs := &rows{}
 	rs.cols = columns

@@ -40,9 +40,4 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 	if !e.argsMatches(against) {
 		t.Error("Arguments should match (time will be compared only by type), but it did not")
 	}
-
-	against = []driver.Value{5, 7899000}
-	if e.argsMatches(against) {
-		t.Error("Arguments should not match, but it did")
-	}
 }

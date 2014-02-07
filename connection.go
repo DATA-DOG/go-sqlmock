@@ -116,4 +116,3 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 
 	return eq.rows, nil
 }
-

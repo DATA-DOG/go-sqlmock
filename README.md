@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/DATA-DOG/go-sqlmock.png)](https://travis-ci.org/DATA-DOG/go-sqlmock)
+
 # Sql driver mock for Golang
 
 This is a **mock** driver as **database/sql/driver** which is very flexible and pragmatic to

@@ -177,7 +177,7 @@ func TestUnexpectedOperations(t *testing.T) {
 	}
 }
 
-func TestWrongUnexpectations(t *testing.T) {
+func TestWrongExpectations(t *testing.T) {
 	db, err := sql.Open("mock", "")
 	if err != nil {
 		t.Errorf("An error '%s' was not expected when opening a stub database connection", err)

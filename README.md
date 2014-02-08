@@ -1,10 +1,11 @@
 [![Build Status](https://travis-ci.org/DATA-DOG/go-sqlmock.png)](https://travis-ci.org/DATA-DOG/go-sqlmock)
+[![GoDoc](https://godoc.org/github.com/DATA-DOG/go-sqlmock?status.png)](https://godoc.org/github.com/DATA-DOG/go-sqlmock)
 
 # Sql driver mock for Golang
 
 This is a **mock** driver as **database/sql/driver** which is very flexible and pragmatic to
 manage and mock expected queries. All the expectations should be met and all queries and actions
-triggered should be mocked in order to pass a test. See exported [api on godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
+triggered should be mocked in order to pass a test.
 
 ## Install
 
@@ -289,7 +290,7 @@ to compare them correctly, this may be improved.
 
 ## Documentation
 
-See it on [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
+Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 
 ## TODO
 

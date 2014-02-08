@@ -10,13 +10,13 @@ type conn struct {
 	active       expectation
 }
 
-// closes a mock database driver connection. It should
+// Close a mock database driver connection. It should
 // be always called to ensure that all expectations
-// were met successfully
+// were met successfully. Returns error if there is any
 func (c *conn) Close() (err error) {
 	for _, e := range mock.conn.expectations {
 		if !e.fulfilled() {
-			err = fmt.Errorf("There is a remaining expectation %T which was not matched yet", e)
+			err = fmt.Errorf("there is a remaining expectation %T which was not matched yet", e)
 			break
 		}
 	}
@@ -28,12 +28,12 @@ func (c *conn) Close() (err error) {
 func (c *conn) Begin() (driver.Tx, error) {
 	e := c.next()
 	if e == nil {
-		return nil, fmt.Errorf("All expectations were already fulfilled, call to Begin transaction was not expected")
+		return nil, fmt.Errorf("all expectations were already fulfilled, call to begin transaction was not expected")
 	}
 
 	etb, ok := e.(*expectedBegin)
 	if !ok {
-		return nil, fmt.Errorf("Call to Begin transaction, was not expected, next expectation is %T as %+v", e, e)
+		return nil, fmt.Errorf("call to begin transaction, was not expected, next expectation is %T as %+v", e, e)
 	}
 	etb.triggered = true
 	return &transaction{c}, etb.err
@@ -53,12 +53,12 @@ func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	e := c.next()
 	query = stripQuery(query)
 	if e == nil {
-		return nil, fmt.Errorf("All expectations were already fulfilled, call to Exec '%s' query with args %+v was not expected", query, args)
+		return nil, fmt.Errorf("all expectations were already fulfilled, call to exec '%s' query with args %+v was not expected", query, args)
 	}
 
 	eq, ok := e.(*expectedExec)
 	if !ok {
-		return nil, fmt.Errorf("Call to Exec query '%s' with args %+v, was not expected, next expectation is %T as %+v", query, args, e, e)
+		return nil, fmt.Errorf("call to exec query '%s' with args %+v, was not expected, next expectation is %T as %+v", query, args, e, e)
 	}
 
 	eq.triggered = true
@@ -67,15 +67,15 @@ func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	}
 
 	if eq.result == nil {
-		return nil, fmt.Errorf("Exec query '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %T as %+v", query, args, eq, eq)
+		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
 	if !eq.queryMatches(query) {
-		return nil, fmt.Errorf("Exec query '%s', does not match regex '%s'", query, eq.sqlRegex.String())
+		return nil, fmt.Errorf("exec query '%s', does not match regex '%s'", query, eq.sqlRegex.String())
 	}
 
 	if !eq.argsMatches(args) {
-		return nil, fmt.Errorf("Exec query '%s', args %+v does not match expected %+v", query, args, eq.args)
+		return nil, fmt.Errorf("exec query '%s', args %+v does not match expected %+v", query, args, eq.args)
 	}
 
 	return eq.result, nil
@@ -89,12 +89,12 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	e := c.next()
 	query = stripQuery(query)
 	if e == nil {
-		return nil, fmt.Errorf("All expectations were already fulfilled, call to Query '%s' with args %+v was not expected", query, args)
+		return nil, fmt.Errorf("all expectations were already fulfilled, call to query '%s' with args %+v was not expected", query, args)
 	}
 
 	eq, ok := e.(*expectedQuery)
 	if !ok {
-		return nil, fmt.Errorf("Call to Query '%s' with args %+v, was not expected, next expectation is %T as %+v", query, args, e, e)
+		return nil, fmt.Errorf("call to query '%s' with args %+v, was not expected, next expectation is %T as %+v", query, args, e, e)
 	}
 
 	eq.triggered = true
@@ -103,15 +103,15 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 	}
 
 	if eq.rows == nil {
-		return nil, fmt.Errorf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, eq, eq)
+		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
 	if !eq.queryMatches(query) {
-		return nil, fmt.Errorf("Query '%s', does not match regex [%s]", query, eq.sqlRegex.String())
+		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, eq.sqlRegex.String())
 	}
 
 	if !eq.argsMatches(args) {
-		return nil, fmt.Errorf("Query '%s', args %+v does not match expected %+v", query, args, eq.args)
+		return nil, fmt.Errorf("query '%s', args %+v does not match expected %+v", query, args, eq.args)
 	}
 
 	return eq.rows, nil

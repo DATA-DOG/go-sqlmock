@@ -1,27 +1,30 @@
 package sqlmock
 
+import (
+    "database/sql/driver"
+)
+
 // Result satisfies sql driver Result, which
 // holds last insert id and rows affected
 // by Exec queries
-type Result struct {
-	lastInsertId int64
+type result struct {
+	insertID int64
 	rowsAffected int64
 }
 
-// Creates a new Result for Exec based query mocks
-func NewResult(lastInsertId int64, rowsAffected int64) *Result {
-	return &Result{
-		lastInsertId,
+// NewResult creates a new sql driver Result
+// for Exec based query mocks.
+func NewResult(lastInsertID int64, rowsAffected int64) driver.Result {
+	return &result{
+		lastInsertID,
 		rowsAffected,
 	}
 }
 
-// Retrieve last inserted id
-func (res *Result) LastInsertId() (int64, error) {
-	return res.lastInsertId, nil
+func (r *result) LastInsertId() (int64, error) {
+	return r.insertID, nil
 }
 
-// Retrieve number rows affected
-func (res *Result) RowsAffected() (int64, error) {
-	return res.rowsAffected, nil
+func (r *result) RowsAffected() (int64, error) {
+	return r.rowsAffected, nil
 }

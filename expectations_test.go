@@ -13,22 +13,22 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 	against := []driver.Value{5}
 
 	if e.argsMatches(against) {
-		t.Error("Arguments should not match, since the size is not the same")
+		t.Error("arguments should not match, since the size is not the same")
 	}
 
 	against = []driver.Value{3, "str"}
 	if e.argsMatches(against) {
-		t.Error("Arguments should not match, since the first argument (int value) is different")
+		t.Error("arguments should not match, since the first argument (int value) is different")
 	}
 
 	against = []driver.Value{5, "st"}
 	if e.argsMatches(against) {
-		t.Error("Arguments should not match, since the second argument (string value) is different")
+		t.Error("arguments should not match, since the second argument (string value) is different")
 	}
 
 	against = []driver.Value{5, "str"}
 	if !e.argsMatches(against) {
-		t.Error("Arguments should match, but it did not")
+		t.Error("arguments should match, but it did not")
 	}
 
 	e.args = []driver.Value{5, time.Now()}
@@ -38,6 +38,6 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 
 	against = []driver.Value{5, tm}
 	if !e.argsMatches(against) {
-		t.Error("Arguments should match (time will be compared only by type), but it did not")
+		t.Error("arguments should match (time will be compared only by type), but it did not")
 	}
 }

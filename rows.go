@@ -40,8 +40,8 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-// Create Rows from CSV string
-// to be used for mocked queries. Satisfies sql driver Rows interface
+// RowsFromCSVString creates Rows from CSV string
+// to be used for mocked queries. Returns sql driver Rows interface
 func RowsFromCSVString(columns []string, s string) driver.Rows {
 	rs := &rows{}
 	rs.cols = columns

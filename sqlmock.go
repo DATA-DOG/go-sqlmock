@@ -85,7 +85,7 @@ func init() {
 	sql.Register("mock", mock)
 }
 
-// Expect transaction to be started
+// ExpectBegin expects transaction to be started
 func ExpectBegin() Mock {
 	e := &expectedBegin{}
 	mock.conn.expectations = append(mock.conn.expectations, e)
@@ -93,7 +93,7 @@ func ExpectBegin() Mock {
 	return mock.conn
 }
 
-// Expect transaction to be commited
+// ExpectCommit expects transaction to be commited
 func ExpectCommit() Mock {
 	e := &expectedCommit{}
 	mock.conn.expectations = append(mock.conn.expectations, e)
@@ -101,7 +101,7 @@ func ExpectCommit() Mock {
 	return mock.conn
 }
 
-// Expect transaction to be rolled back
+// ExpectRollback expects transaction to be rolled back
 func ExpectRollback() Mock {
 	e := &expectedRollback{}
 	mock.conn.expectations = append(mock.conn.expectations, e)
@@ -109,13 +109,13 @@ func ExpectRollback() Mock {
 	return mock.conn
 }
 
-// The expectation will return an error
+// WillReturnError the expectation will return an error
 func (c *conn) WillReturnError(err error) Mock {
 	c.active.setError(err)
 	return c
 }
 
-// Expect database Exec to be triggered, which will match
+// ExpectExec expects database Exec to be triggered, which will match
 // the given query string as a regular expression
 func ExpectExec(sqlRegexStr string) Mock {
 	e := &expectedExec{}
@@ -125,7 +125,7 @@ func ExpectExec(sqlRegexStr string) Mock {
 	return mock.conn
 }
 
-// Expect database Query to be triggered, which will match
+// ExpectQuery database Query to be triggered, which will match
 // the given query string as a regular expression
 func ExpectQuery(sqlRegexStr string) Mock {
 	e := &expectedQuery{}
@@ -136,14 +136,14 @@ func ExpectQuery(sqlRegexStr string) Mock {
 	return mock.conn
 }
 
-// The expectation should be called with given arguments.
+// WithArgs expectation should be called with given arguments.
 // Works with Exec and Query expectations
 func (c *conn) WithArgs(args ...driver.Value) Mock {
 	eq, ok := c.active.(*expectedQuery)
 	if !ok {
 		ee, ok := c.active.(*expectedExec)
 		if !ok {
-			panic(fmt.Sprintf("Arguments may be expected only with query based expectations, current is %T", c.active))
+			panic(fmt.Sprintf("arguments may be expected only with query based expectations, current is %T", c.active))
 		}
 		ee.args = args
 	} else {
@@ -152,23 +152,23 @@ func (c *conn) WithArgs(args ...driver.Value) Mock {
 	return c
 }
 
-// The expectation will return a Result.
+// WillReturnResult expectation will return a Result.
 // Works only with Exec expectations
 func (c *conn) WillReturnResult(result driver.Result) Mock {
 	eq, ok := c.active.(*expectedExec)
 	if !ok {
-		panic(fmt.Sprintf("driver.Result may be returned only by Exec expectations, current is %T", c.active))
+		panic(fmt.Sprintf("driver.result may be returned only by exec expectations, current is %T", c.active))
 	}
 	eq.result = result
 	return c
 }
 
-// The expectation will return Rows.
+// WillReturnRows expectation will return Rows.
 // Works only with Query expectations
 func (c *conn) WillReturnRows(rows driver.Rows) Mock {
 	eq, ok := c.active.(*expectedQuery)
 	if !ok {
-		panic(fmt.Sprintf("driver.Rows may be returned only by Query expectations, current is %T", c.active))
+		panic(fmt.Sprintf("driver.rows may be returned only by query expectations, current is %T", c.active))
 	}
 	eq.rows = rows
 	return c

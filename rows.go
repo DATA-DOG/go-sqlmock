@@ -40,17 +40,24 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-func RowFromInterface(columns []string, values ...interface{}) driver.Rows {
-	rs := &rows{}
-	rs.cols = columns
+func (r *rows) AddRow(values ...interface{}) {
+	if len(values) != len(r.cols) {
+		panic("Expected number of values to match number of columns")
+	}
 
-	row := make([]driver.Value, len(columns))
+	row := make([]driver.Value, len(r.cols))
 	for i, v := range values {
 		row[i] = v
 	}
 
-	rs.rows = append(rs.rows, row)
+	r.rows = append(r.rows, row)
+}
 
+// NewRows allows Rows to be created manually to use
+// any of the types sql/driver.Value supports
+func NewRows(columns []string) *rows {
+	rs := &rows{}
+	rs.cols = columns
 	return rs
 }
 

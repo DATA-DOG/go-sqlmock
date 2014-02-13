@@ -40,6 +40,20 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
+func RowFromInterface(columns []string, values ...interface{}) driver.Rows {
+	rs := &rows{}
+	rs.cols = columns
+
+	row := make([]driver.Value, len(columns))
+	for i, v := range values {
+		row[i] = v
+	}
+
+	rs.rows = append(rs.rows, row)
+
+	return rs
+}
+
 // RowsFromCSVString creates Rows from CSV string
 // to be used for mocked queries. Returns sql driver Rows interface
 func RowsFromCSVString(columns []string, s string) driver.Rows {

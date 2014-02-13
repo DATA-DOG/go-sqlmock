@@ -13,7 +13,7 @@ func TestMockQuery(t *testing.T) {
 		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 
-	rs := RowsFromCSVString([]string{"id", "title"}, "5,hello world")
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
 
 	ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
@@ -153,12 +153,12 @@ func TestPreparedQueryExecutions(t *testing.T) {
 		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 
-	rs1 := RowsFromCSVString([]string{"id", "title"}, "5,hello world")
+	rs1 := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
 	ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)
 
-	rs2 := RowsFromCSVString([]string{"id", "title"}, "2,whoop")
+	rs2 := NewRows([]string{"id", "title"}).FromCSVString("2,whoop")
 	ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(2).
 		WillReturnRows(rs2)
@@ -237,7 +237,7 @@ func TestWrongExpectations(t *testing.T) {
 
 	ExpectBegin()
 
-	rs1 := RowsFromCSVString([]string{"id", "title"}, "5,hello world")
+	rs1 := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
 	ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)

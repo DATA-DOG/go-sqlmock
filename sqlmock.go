@@ -33,7 +33,7 @@ to work with:
         // expect query to fetch order, match it with regexp
         sqlmock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE").
             WithArgs(1).
-            WillReturnRows(sqlmock.RowsFromCSVString(columns, "1,1"))
+            WillReturnRows(sqlmock.NewRows(columns).FromCSVString("1,1"))
         // expect transaction rollback, since order status is "cancelled"
         sqlmock.ExpectRollback()
 

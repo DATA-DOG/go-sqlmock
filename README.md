@@ -165,7 +165,7 @@ func TestShouldNotCancelOrderWithNonPendingStatus(t *testing.T) {
     // expect query to fetch order and user, match it with regexp
     sqlmock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
         WithArgs(1).
-        WillReturnRows(sqlmock.RowsFromCSVString(columns, "1,1"))
+        WillReturnRows(sqlmock.NewRows(columns).FromCSVString("1,1"))
     // expect transaction rollback, since order status is "cancelled"
     sqlmock.ExpectRollback()
 
@@ -195,7 +195,7 @@ func TestShouldRefundUserWhenOrderIsCancelled(t *testing.T) {
     // expect query to fetch order and user, match it with regexp
     sqlmock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
         WithArgs(1).
-        WillReturnRows(sqlmock.RowsFromCSVString(columns, "1,0,25.75,3.25,2,10.00"))
+        WillReturnRows(sqlmock.NewRows(columns).AddRow(1, 0, 25.75, 3.25, 2, 10.00))
     // expect user balance update
     sqlmock.ExpectExec("UPDATE users SET balance").
         WithArgs(25.75 + 3.25, 2). // refund amount, user id
@@ -276,13 +276,35 @@ Instead of result we can return error..
 
 ``` go
 sqlmock.ExpectQuery("SELECT (.*) FROM orders").
-    WithArgs("string value").
-    WillReturnResult(sqlmock.NewResult(0, 1))
+	WithArgs("string value").
+	WillReturnResult(sqlmock.NewResult(0, 1))
 ```
 
 **WithArgs** expectation, compares values based on their type, for usual values like **string, float, int**
 it matches the actual value. Types like **time** are compared only by type. Other types might require different ways
 to compare them correctly, this may be improved.
+
+You can build rows either from CSV string or from interface values:
+
+**Rows** interface, which satisfies sql driver.Rows:
+
+``` go
+type Rows interface {
+	AddRow(...driver.Value) Rows
+	FromCSVString(s string) Rows
+	Next([]driver.Value) error
+	Columns() []string
+	Close() error
+}
+```
+
+Example for to build rows:
+
+``` go
+rs := sqlmock.NewRows([]string{"column1", "column2"}).
+	FromCSVString("one,1\ntwo,2").
+	AddRow("three", 3)
+```
 
 ## Run tests
 
@@ -295,6 +317,13 @@ Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 ## TODO
 
 - handle argument comparison more efficiently
+
+## Changes
+
+- **2014-02-14** RowsFromCSVString is now a part of Rows interface named as FromCSVString.
+It has changed to allow more ways to construct rows and to easily extend this API in future.
+See [issue 1](https://github.com/DATA-DOG/go-sqlmock/issues/1)
+**RowsFromCSVString** is deprecated and will be removed in future
 
 ## Contributions
 

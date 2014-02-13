@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+// Rows interface allows to construct rows
+// which also satisfies database/sql/driver.Rows interface
+type Rows interface {
+	AddRow(...driver.Value) Rows
+	FromCSVString(s string) Rows
+	Next([]driver.Value) error
+	Columns() []string
+	Close() error
+}
+
 // a struct which implements database/sql/driver.Rows
 type rows struct {
 	cols []string
@@ -40,7 +50,17 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-func (r *rows) AddRow(values ...interface{}) {
+// NewRows allows Rows to be created from a group of
+// sql driver.Value or from the CSV string and
+// to be used as sql driver.Rows
+func NewRows(columns []string) Rows {
+	return &rows{cols: columns}
+}
+
+// AddRow adds a row which is built from arguments
+// in the same column order, returns sql driver.Rows
+// compatible interface
+func (r *rows) AddRow(values ...driver.Value) Rows {
 	if len(values) != len(r.cols) {
 		panic("Expected number of values to match number of columns")
 	}
@@ -51,18 +71,33 @@ func (r *rows) AddRow(values ...interface{}) {
 	}
 
 	r.rows = append(r.rows, row)
+	return r
 }
 
-// NewRows allows Rows to be created manually to use
-// any of the types sql/driver.Value supports
-func NewRows(columns []string) *rows {
-	rs := &rows{}
-	rs.cols = columns
-	return rs
+// FromCSVString adds rows from CSV string.
+// Returns sql driver.Rows compatible interface
+func (r *rows) FromCSVString(s string) Rows {
+	res := strings.NewReader(strings.TrimSpace(s))
+	csvReader := csv.NewReader(res)
+
+	for {
+		res, err := csvReader.Read()
+		if err != nil || res == nil {
+			break
+		}
+
+		row := make([]driver.Value, len(r.cols))
+		for i, v := range res {
+			row[i] = []byte(strings.TrimSpace(v))
+		}
+		r.rows = append(r.rows, row)
+	}
+	return r
 }
 
 // RowsFromCSVString creates Rows from CSV string
 // to be used for mocked queries. Returns sql driver Rows interface
+// ** DEPRECATED ** will be removed in the future, use Rows.FromCSVString
 func RowsFromCSVString(columns []string, s string) driver.Rows {
 	rs := &rows{}
 	rs.cols = columns

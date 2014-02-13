@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestMockQuery(t *testing.T) {
@@ -41,6 +42,57 @@ func TestMockQuery(t *testing.T) {
 
 	if title != "hello world" {
 		t.Errorf("expected mocked title to be 'hello world', but got '%s' instead", title)
+	}
+
+	if err = db.Close(); err != nil {
+		t.Errorf("error '%s' was not expected while closing the database", err)
+	}
+}
+
+func TestMockQueryTypes(t *testing.T) {
+	db, err := sql.Open("mock", "")
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	columns := []string{"id", "timestamp", "sold"}
+
+	timestamp := time.Now()
+	rs := NewRows(columns)
+	rs.AddRow(5, timestamp, true)
+
+	ExpectQuery("SELECT (.+) FROM sales WHERE id = ?").
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	rows, err := db.Query("SELECT (.+) FROM sales WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Error("it must have had one row as result, but got empty result set instead")
+	}
+
+	var id int
+	var time time.Time
+	var sold bool
+
+	err = rows.Scan(&id, &time, &sold)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 5 {
+		t.Errorf("expected mocked id to be 5, but got %d instead", id)
+	}
+
+	if time != timestamp {
+		t.Errorf("expected mocked time to be %s, but got '%s' instead", timestamp, time)
+	}
+
+	if sold != true {
+		t.Errorf("expected mocked boolean to be true, but got %v instead", sold)
 	}
 
 	if err = db.Close(); err != nil {

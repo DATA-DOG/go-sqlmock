@@ -40,6 +40,27 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
+func (r *rows) AddRow(values ...interface{}) {
+	if len(values) != len(r.cols) {
+		panic("Expected number of values to match number of columns")
+	}
+
+	row := make([]driver.Value, len(r.cols))
+	for i, v := range values {
+		row[i] = v
+	}
+
+	r.rows = append(r.rows, row)
+}
+
+// NewRows allows Rows to be created manually to use
+// any of the types sql/driver.Value supports
+func NewRows(columns []string) *rows {
+	rs := &rows{}
+	rs.cols = columns
+	return rs
+}
+
 // RowsFromCSVString creates Rows from CSV string
 // to be used for mocked queries. Returns sql driver Rows interface
 func RowsFromCSVString(columns []string, s string) driver.Rows {

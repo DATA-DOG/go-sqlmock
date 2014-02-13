@@ -1,14 +1,14 @@
 package sqlmock
 
 import (
-    "database/sql/driver"
+	"database/sql/driver"
 )
 
 // Result satisfies sql driver Result, which
 // holds last insert id and rows affected
 // by Exec queries
 type result struct {
-	insertID int64
+	insertID     int64
 	rowsAffected int64
 }
 

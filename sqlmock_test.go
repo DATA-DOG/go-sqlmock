@@ -318,3 +318,89 @@ func TestExecExpectations(t *testing.T) {
 		t.Errorf("error '%s' was not expected while closing the database", err)
 	}
 }
+
+func TestRowBuilderAndNilTypes(t *testing.T) {
+	db, err := sql.Open("mock", "")
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	rs := NewRows([]string{"id", "active", "created", "status"}).
+		AddRow(1, true, time.Now(), 5).
+		AddRow(2, false, nil, nil)
+
+	ExpectQuery("SELECT (.+) FROM sales").WillReturnRows(rs)
+
+	rows, err := db.Query("SELECT * FROM sales")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+	defer rows.Close()
+
+	// NullTime and NullInt are used from stubs_test.go
+	var (
+		id      int
+		active  bool
+		created NullTime
+		status  NullInt
+	)
+
+	if !rows.Next() {
+		t.Error("it must have had row in rows, but got empty result set instead")
+	}
+
+	err = rows.Scan(&id, &active, &created, &status)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 1 {
+		t.Errorf("expected mocked id to be 1, but got %d instead", id)
+	}
+
+	if !active {
+		t.Errorf("expected 'active' to be 'true', but got '%v' instead", active)
+	}
+
+	if !created.Valid {
+		t.Errorf("expected 'created' to be valid, but it %+v is not", created)
+	}
+
+	if !status.Valid {
+		t.Errorf("expected 'status' to be valid, but it %+v is not", status)
+	}
+
+	if status.Integer != 5 {
+		t.Errorf("expected 'status' to be '5', but got '%d'", status.Integer)
+	}
+
+	// test second row
+	if !rows.Next() {
+		t.Error("it must have had row in rows, but got empty result set instead")
+	}
+
+	err = rows.Scan(&id, &active, &created, &status)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 2 {
+		t.Errorf("expected mocked id to be 2, but got %d instead", id)
+	}
+
+	if active {
+		t.Errorf("expected 'active' to be 'false', but got '%v' instead", active)
+	}
+
+	if created.Valid {
+		t.Errorf("expected 'created' to be invalid, but it %+v is not", created)
+	}
+
+	if status.Valid {
+		t.Errorf("expected 'status' to be invalid, but it %+v is not", status)
+	}
+
+	if err = db.Close(); err != nil {
+		t.Errorf("error '%s' was not expected while closing the database", err)
+	}
+}

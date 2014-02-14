@@ -10,11 +10,9 @@ import (
 // Rows interface allows to construct rows
 // which also satisfies database/sql/driver.Rows interface
 type Rows interface {
+	driver.Rows // composed interface, supports sql driver.Rows
 	AddRow(...driver.Value) Rows
 	FromCSVString(s string) Rows
-	Next([]driver.Value) error
-	Columns() []string
-	Close() error
 }
 
 // a struct which implements database/sql/driver.Rows

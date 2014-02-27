@@ -8,10 +8,14 @@ import (
 
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{}
+	against := []driver.Value{5}
+	if !e.argsMatches(against) {
+		t.Error("arguments should match, since the no expectation was set")
+	}
+
 	e.args = []driver.Value{5, "str"}
 
-	against := []driver.Value{5}
-
+	against = []driver.Value{5}
 	if e.argsMatches(against) {
 		t.Error("arguments should not match, since the size is not the same")
 	}

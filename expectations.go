@@ -40,6 +40,9 @@ func (e *queryBasedExpectation) queryMatches(sql string) bool {
 }
 
 func (e *queryBasedExpectation) argsMatches(args []driver.Value) bool {
+	if nil == e.args {
+		return true
+	}
 	if len(args) != len(e.args) {
 		return false
 	}

@@ -153,7 +153,7 @@ import (
 // will test that order with a different status, cannot be cancelled
 func TestShouldNotCancelOrderWithNonPendingStatus(t *testing.T) {
     // open database stub
-    db, err := sql.Open("mock", "")
+    db, err := sqlmock.New()
     if err != nil {
         t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
     }
@@ -183,7 +183,7 @@ func TestShouldNotCancelOrderWithNonPendingStatus(t *testing.T) {
 // will test order cancellation
 func TestShouldRefundUserWhenOrderIsCancelled(t *testing.T) {
     // open database stub
-    db, err := sql.Open("mock", "")
+    db, err := sqlmock.New()
     if err != nil {
         t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
     }
@@ -221,7 +221,7 @@ func TestShouldRefundUserWhenOrderIsCancelled(t *testing.T) {
 // will test order cancellation
 func TestShouldRollbackOnError(t *testing.T) {
     // open database stub
-    db, err := sql.Open("mock", "")
+    db, err := sqlmock.New()
     if err != nil {
         t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
     }
@@ -320,6 +320,10 @@ Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 
 ## Changes
 
+- **2014-04-21** introduce **sqlmock.New()** to open a mock database connection for tests. This method
+calls sql.DB.Ping to ensure that connection is open, see [issue](https://github.com/DATA-DOG/go-sqlmock/issues/4).
+This way on Close it will surely assert if all expectations are met, even if database was not triggered at all.
+The old way is still available, but it is advisable to call db.Ping manually before asserting with db.Close.
 - **2014-02-14** RowsFromCSVString is now a part of Rows interface named as FromCSVString.
 It has changed to allow more ways to construct rows and to easily extend this API in future.
 See [issue 1](https://github.com/DATA-DOG/go-sqlmock/issues/1)

@@ -85,6 +85,19 @@ func init() {
 	sql.Register("mock", mock)
 }
 
+// New creates sqlmock database connection
+// and pings it so that all expectations could be
+// asserted on Close.
+func New() (db *sql.DB, err error) {
+	db, err = sql.Open("mock", "")
+	if err != nil {
+		return
+	}
+	// ensure open connection, otherwise Close does not assert expectations
+	db.Ping()
+	return
+}
+
 // ExpectBegin expects transaction to be started
 func ExpectBegin() Mock {
 	e := &expectedBegin{}

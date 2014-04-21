@@ -7,6 +7,22 @@ import (
 	"time"
 )
 
+// test the case when db is not triggered and expectations
+// are not asserted on close
+func TestIssue4(t *testing.T) {
+	db, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	ExpectQuery("some sql query which will not be called").
+		WillReturnRows(NewRows([]string{"id"}))
+
+	err = db.Close()
+	if err == nil {
+		t.Errorf("Was expecting an error, since expected query was not matched")
+	}
+}
+
 func TestMockQuery(t *testing.T) {
 	db, err := sql.Open("mock", "")
 	if err != nil {

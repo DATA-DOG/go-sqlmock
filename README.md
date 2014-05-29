@@ -320,6 +320,7 @@ Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 
 ## Changes
 
+- **2014-05-29** allow to match arguments in more sophisticated ways, by providing an **sqlmock.Argument** interface
 - **2014-04-21** introduce **sqlmock.New()** to open a mock database connection for tests. This method
 calls sql.DB.Ping to ensure that connection is open, see [issue](https://github.com/DATA-DOG/go-sqlmock/issues/4).
 This way on Close it will surely assert if all expectations are met, even if database was not triggered at all.

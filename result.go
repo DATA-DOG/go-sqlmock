@@ -10,21 +10,30 @@ import (
 type result struct {
 	insertID     int64
 	rowsAffected int64
+	err          error
 }
 
 // NewResult creates a new sql driver Result
 // for Exec based query mocks.
 func NewResult(lastInsertID int64, rowsAffected int64) driver.Result {
 	return &result{
-		lastInsertID,
-		rowsAffected,
+		insertID:     lastInsertID,
+		rowsAffected: rowsAffected,
+	}
+}
+
+// NewErrorResult creates a new sql driver Result
+// which returns an error given for both interface methods
+func NewErrorResult(err error) driver.Result {
+	return &result{
+		err: err,
 	}
 }
 
 func (r *result) LastInsertId() (int64, error) {
-	return r.insertID, nil
+	return r.insertID, r.err
 }
 
 func (r *result) RowsAffected() (int64, error) {
-	return r.rowsAffected, nil
+	return r.rowsAffected, r.err
 }

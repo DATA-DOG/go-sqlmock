@@ -277,7 +277,16 @@ Instead of result we can return error..
 ``` go
 sqlmock.ExpectQuery("SELECT (.*) FROM orders").
 	WithArgs("string value").
-	WillReturnResult(sqlmock.NewResult(0, 1))
+	WillReturnRows(sqlmock.NewRows([]string{"col"}).AddRow("val"))
+```
+
+**NOTE:** it matches a regular expression. Some regex special characters must be escaped if you want to match them.
+For example if we want to match a subselect:
+
+``` go
+sqlmock.ExpectQuery("SELECT (.*) FROM orders WHERE id IN \\(SELECT id FROM finished WHERE status = 1\\)").
+	WithArgs("string value").
+	WillReturnRows(sqlmock.NewRows([]string{"col"}).AddRow("val"))
 ```
 
 **WithArgs** expectation, compares values based on their type, for usual values like **string, float, int**

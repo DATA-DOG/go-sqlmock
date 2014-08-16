@@ -420,3 +420,19 @@ func TestRowBuilderAndNilTypes(t *testing.T) {
 		t.Errorf("error '%s' was not expected while closing the database", err)
 	}
 }
+
+func TestArgumentReflectValueTypeError(t *testing.T) {
+	db, err := sql.Open("mock", "")
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	rs := NewRows([]string{"id"}).AddRow(1)
+
+	ExpectQuery("SELECT (.+) FROM sales").WithArgs(5.5).WillReturnRows(rs)
+
+	_, err = db.Query("SELECT * FROM sales WHERE x = ?", 5)
+	if err == nil {
+		t.Error("Expected error, but got none")
+	}
+}

@@ -3,6 +3,7 @@ package sqlmock
 import (
 	"database/sql/driver"
 	"fmt"
+	"reflect"
 )
 
 type conn struct {
@@ -49,7 +50,7 @@ func (c *conn) next() (e expectation) {
 	return nil // all expectations were fulfilled
 }
 
-func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
+func (c *conn) Exec(query string, args []driver.Value) (res driver.Result, err error) {
 	e := c.next()
 	query = stripQuery(query)
 	if e == nil {
@@ -70,6 +71,8 @@ func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
+	defer argMatcherErrorHandler(&err) // converts panic to error in case of reflect value type mismatch
+
 	if !eq.queryMatches(query) {
 		return nil, fmt.Errorf("exec query '%s', does not match regex '%s'", query, eq.sqlRegex.String())
 	}
@@ -78,14 +81,14 @@ func (c *conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 		return nil, fmt.Errorf("exec query '%s', args %+v does not match expected %+v", query, args, eq.args)
 	}
 
-	return eq.result, nil
+	return eq.result, err
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	return &statement{mock.conn, stripQuery(query)}, nil
 }
 
-func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
+func (c *conn) Query(query string, args []driver.Value) (rw driver.Rows, err error) {
 	e := c.next()
 	query = stripQuery(query)
 	if e == nil {
@@ -106,6 +109,8 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
+	defer argMatcherErrorHandler(&err) // converts panic to error in case of reflect value type mismatch
+
 	if !eq.queryMatches(query) {
 		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, eq.sqlRegex.String())
 	}
@@ -114,5 +119,15 @@ func (c *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
 		return nil, fmt.Errorf("query '%s', args %+v does not match expected %+v", query, args, eq.args)
 	}
 
-	return eq.rows, nil
+	return eq.rows, err
+}
+
+func argMatcherErrorHandler(errp *error) {
+	if e := recover(); e != nil {
+		if se, ok := e.(*reflect.ValueError); ok { // catch reflect error, failed type conversion
+			*errp = fmt.Errorf("Failed to compare query arguments: %s", se)
+		} else {
+			panic(e) // overwise panic
+		}
+	}
 }

@@ -323,12 +323,9 @@ rs := sqlmock.NewRows([]string{"column1", "column2"}).
 
 Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 
-## TODO
-
-- handle argument comparison more efficiently
-
 ## Changes
 
+- **2014-08-16** instead of **panic** during reflect type mismatch when comparing query arguments - now return error
 - **2014-08-14** added **sqlmock.NewErrorResult** which gives an option to return driver.Result with errors for
 interface methods, see [issue](https://github.com/DATA-DOG/go-sqlmock/issues/5)
 - **2014-05-29** allow to match arguments in more sophisticated ways, by providing an **sqlmock.Argument** interface

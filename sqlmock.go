@@ -122,6 +122,14 @@ func ExpectRollback() Mock {
 	return mock.conn
 }
 
+// ExpectPrepare expects Query to be prepared
+func ExpectPrepare() Mock {
+	e := &expectedPrepare{}
+	mock.conn.expectations = append(mock.conn.expectations, e)
+	mock.conn.active = e
+	return mock.conn
+}
+
 // WillReturnError the expectation will return an error
 func (c *conn) WillReturnError(err error) Mock {
 	c.active.setError(err)

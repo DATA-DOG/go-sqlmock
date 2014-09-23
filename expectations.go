@@ -117,3 +117,10 @@ type expectedExec struct {
 
 	result driver.Result
 }
+
+// Prepare expectation
+type expectedPrepare struct {
+	commonExpectation
+
+	statement driver.Stmt
+}

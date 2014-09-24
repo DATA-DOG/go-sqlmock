@@ -163,6 +163,68 @@ func TestTransactionExpectations(t *testing.T) {
 	}
 }
 
+func TestPrepareExpectations(t *testing.T) {
+	db, err := sql.Open("mock", "")
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	// no expectations, w/o ExpectPrepare()
+	stmt, err := db.Prepare("SELECT (.+) FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while creating a prepared statement", err)
+	}
+	if stmt == nil {
+		t.Errorf("stmt was expected while creating a prepared statement")
+	}
+
+	// expect something else, w/o ExpectPrepare()
+	var id int
+	var title string
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+
+	ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	stmt, err = db.Prepare("SELECT (.+) FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while creating a prepared statement", err)
+	}
+	if stmt == nil {
+		t.Errorf("stmt was expected while creating a prepared statement")
+	}
+
+	err = stmt.QueryRow(5).Scan(&id, &title)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	// expect normal result
+	ExpectPrepare()
+	stmt, err = db.Prepare("SELECT (.+) FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while creating a prepared statement", err)
+	}
+	if stmt == nil {
+		t.Errorf("stmt was expected while creating a prepared statement")
+	}
+
+	// expect error result
+	ExpectPrepare().WillReturnError(fmt.Errorf("Some DB error occurred"))
+	stmt, err = db.Prepare("SELECT (.+) FROM articles WHERE id = ?")
+	if err == nil {
+		t.Error("error was expected while creating a prepared statement")
+	}
+	if stmt != nil {
+		t.Errorf("stmt was not expected while creating a prepared statement returning error")
+	}
+
+	if err = db.Close(); err != nil {
+		t.Errorf("error '%s' was not expected while closing the database", err)
+	}
+}
+
 func TestPreparedQueryExecutions(t *testing.T) {
 	db, err := sql.Open("mock", "")
 	if err != nil {

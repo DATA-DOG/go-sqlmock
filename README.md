@@ -315,6 +315,13 @@ rs := sqlmock.NewRows([]string{"column1", "column2"}).
 	AddRow("three", 3)
 ```
 
+**Prepare** will ignore other expectations if ExpectPrepare not set. When set, can expect normal result or simulate an error:
+
+``` go
+rs := sqlmock.ExpectPrepare().
+    WillReturnError(fmt.Errorf("Query prepare failed"))
+```
+
 ## Run tests
 
     go test

@@ -85,6 +85,22 @@ func (c *conn) Exec(query string, args []driver.Value) (res driver.Result, err e
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
+	e := c.next()
+
+	// for backwards compatibility, ignore when Prepare not expected
+	if e == nil {
+		return &statement{mock.conn, stripQuery(query)}, nil
+	}
+	eq, ok := e.(*expectedPrepare)
+	if !ok {
+		return &statement{mock.conn, stripQuery(query)}, nil
+	}
+
+	eq.triggered = true
+	if eq.err != nil {
+		return nil, eq.err // mocked to return error
+	}
+
 	return &statement{mock.conn, stripQuery(query)}, nil
 }
 

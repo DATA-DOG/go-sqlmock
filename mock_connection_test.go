@@ -27,8 +27,8 @@ func TestDatabaseSQLReturnsCorrectInstances(t *testing.T) {
 		return
 	}
 
-	mockOne.ExpectQuery("SELECT one").WillReturnRows(NewRows([]string{"one"}))
-	mockTwo.ExpectQuery("SELECT two").WillReturnRows(NewRows([]string{"two"}))
+	mockOne.ExpectQuery("SELECT one").WillReturnRows(NewRows([]string{"one"}).AddRow("one"))
+	mockTwo.ExpectQuery("SELECT two").WillReturnRows(NewRows([]string{"two"}).AddRow("two"))
 
 	dbOne, err := sql.Open("mock", "id=one")
 	if err != nil {

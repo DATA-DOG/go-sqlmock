@@ -27,8 +27,8 @@ func TestDatabaseSQLReturnsCorrectInstances(t *testing.T) {
 		return
 	}
 
-	mockOne.ExpectQuery("SELECT one")
-	mockTwo.ExpectQuery("SELECT two")
+	mockOne.ExpectQuery("SELECT one").WillReturnRows(NewRows([]string{"one"}))
+	mockTwo.ExpectQuery("SELECT two").WillReturnRows(NewRows([]string{"two"}))
 
 	dbOne, err := sql.Open("mock", "id=one")
 	if err != nil {
@@ -65,13 +65,33 @@ func TestDatabaseSQLReturnsCorrectInstances(t *testing.T) {
 
 	for id, db := range map[string]*sql.DB{"one": dbOne, "two": dbTwo} {
 		go func(id string, db *sql.DB) {
-			_, err := db.Query("SELECT " + id)
+			rows, err := db.Query("SELECT " + id)
 			if err != nil {
 				t.Errorf("error on query: %v", err)
+				return
+			}
+			if !rows.Next() {
+				t.Error("no rows")
+				return
+			}
+			var rowID string
+			err = rows.Scan(&rowID)
+			if err != nil {
+				t.Errorf("error on scan row: %v", err)
+				return
+			}
+			if rowID != id {
+				t.Errorf("expect result to be %s, got %s", id, rowID)
+				return
+			}
+			err = rows.Close()
+			if err != nil {
+				t.Errorf("error on close rows: %v", err)
 			}
 			err = db.Close()
 			if err != nil {
 				t.Errorf("error on db close (id %s): %v", id, err)
+				return
 			}
 		}(id, db)
 	}

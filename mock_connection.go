@@ -1,6 +1,9 @@
 package sqlmock
 
 import (
+	"crypto/rand"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"sync"
@@ -27,6 +30,23 @@ func ResetMockConns() {
 	mutex.Unlock()
 }
 
+// MockConnIDGenerator is the ID generation method for MockConn IDs
+//
+// Replace it with your own if you like
+var MockConnIDGenerator func() (string, error) = func() (string, error) {
+	r := make([]byte, 20)
+	_, err := rand.Read(r)
+	if err != nil {
+		return "", err
+	}
+	h := sha1.New()
+	_, err = h.Write(r)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 // NewMockConn creates a new mock connection instance
 //
 // Instances are identified using an ID string. You can pass the expected ID as a DSN
@@ -34,17 +54,17 @@ func ResetMockConns() {
 //
 //   db, err := sql.Open("mock", "id=instance_id")
 //
-// IDs are unique, creating a new mock conn when the ID is already present will
-// end in an error.
-func NewMockConn(ID string) (*MockConn, error) {
+// IDs will be generated using the MockConnIDGenerator
+func NewMockConn() (ID string, c *MockConn, err error) {
+	ID, err = MockConnIDGenerator()
+	if err != nil {
+		return "", nil, err
+	}
 	mutex.Lock()
 	defer mutex.Unlock()
-	if _, ok := mockConnections[ID]; ok {
-		return nil, fmt.Errorf("there is already a connection with the ID %s", ID)
-	}
-	c := &MockConn{conn: &conn{}}
+	c = &MockConn{conn: &conn{}}
 	mockConnections[ID] = c
-	return c, nil
+	return
 }
 
 func mockConn(ID string) (*MockConn, error) {
@@ -122,5 +142,13 @@ func (mock *MockConn) Close() (err error) {
 	}
 	mock.conn.expectations = []expectation{}
 	mock.conn.active = nil
+	mutex.Lock()
+	for ID, c := range mockConnections {
+		if c == mock {
+			delete(mockConnections, ID)
+			break
+		}
+	}
+	mutex.Unlock()
 	return err
 }

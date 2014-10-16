@@ -7,30 +7,21 @@ import (
 )
 
 func TestDatabaseSQLReturnsCorrectInstances(t *testing.T) {
-	mockOne, err := NewMockConn("one")
+	mockOneID, mockOne, err := NewMockConn()
 	if err != nil {
 		t.Errorf("got error on init conn: %v", err)
 		return
 	}
-	mockTwo, err := NewMockConn("two")
+	mockTwoID, mockTwo, err := NewMockConn()
 	if err != nil {
 		t.Errorf("got error on init conn: %v", err)
-		return
-	}
-	_, err = NewMockConn("one")
-	if err == nil {
-		t.Error("expect error on requesting same id, got nil instead")
-		return
-	}
-	if !strings.Contains(err.Error(), "already a connection") {
-		t.Errorf("expect error message hinting at already existing connection. got %s", err.Error())
 		return
 	}
 
 	mockOne.ExpectQuery("SELECT one").WillReturnRows(NewRows([]string{"one"}).AddRow("one"))
 	mockTwo.ExpectQuery("SELECT two").WillReturnRows(NewRows([]string{"two"}).AddRow("two"))
 
-	dbOne, err := sql.Open("mock", "id=one")
+	dbOne, err := sql.Open("mock", "id="+mockOneID)
 	if err != nil {
 		t.Errorf("expect db one to be returned, got error instead: %v", err)
 		return
@@ -40,7 +31,7 @@ func TestDatabaseSQLReturnsCorrectInstances(t *testing.T) {
 		t.Errorf("error on ping db one: %v", err)
 		return
 	}
-	dbTwo, err := sql.Open("mock", "id=two")
+	dbTwo, err := sql.Open("mock", "id="+mockTwoID)
 	if err != nil {
 		t.Errorf("expect db two to be returned, got error instead: %v", err)
 		return

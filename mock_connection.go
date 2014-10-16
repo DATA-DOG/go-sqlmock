@@ -20,6 +20,13 @@ type MockConn struct {
 	*conn
 }
 
+// ResetMockConns resets all registered MockConn instances
+func ResetMockConns() {
+	mutex.Lock()
+	mockConnections = make(map[string]*MockConn)
+	mutex.Unlock()
+}
+
 // NewMockConn creates a new mock connection instance
 //
 // Instances are identified using an ID string. You can pass the expected ID as a DSN

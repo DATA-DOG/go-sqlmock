@@ -38,6 +38,11 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 		t.Error("arguments should not match, since the second argument (string value) is different")
 	}
 
+	against = []driver.Value{5, ".+"}
+	if e.argsMatches(against) {
+		t.Error("args should match, since the second argument is a wildcard")
+	}	
+
 	against = []driver.Value{5, "str"}
 	if !e.argsMatches(against) {
 		t.Error("arguments should match, but it did not")

@@ -77,7 +77,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.Value) bool {
 			}
 		case reflect.String:
 			if ai.String() != ".+" && vi.String() != ai.String() {
-			   	       	  return false
+				return false
 			}
 		default:
 			// compare types like time.Time based on type only

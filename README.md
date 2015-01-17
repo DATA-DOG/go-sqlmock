@@ -329,6 +329,7 @@ rs := sqlmock.ExpectPrepare().
 ## Documentation
 
 Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
+See **.travis.yml** for supported **go** versions
 
 ## Changes
 

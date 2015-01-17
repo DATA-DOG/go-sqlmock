@@ -94,8 +94,7 @@ func New() (db *sql.DB, err error) {
 		return
 	}
 	// ensure open connection, otherwise Close does not assert expectations
-	db.Ping()
-	return
+	return db, db.Ping()
 }
 
 // ExpectBegin expects transaction to be started

@@ -63,13 +63,6 @@ func (c *conn) Exec(query string, args []driver.Value) (res driver.Result, err e
 	}
 
 	eq.triggered = true
-	if eq.err != nil {
-		return nil, eq.err // mocked to return error
-	}
-
-	if eq.result == nil {
-		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, eq, eq)
-	}
 
 	defer argMatcherErrorHandler(&err) // converts panic to error in case of reflect value type mismatch
 
@@ -79,6 +72,14 @@ func (c *conn) Exec(query string, args []driver.Value) (res driver.Result, err e
 
 	if !eq.argsMatches(args) {
 		return nil, fmt.Errorf("exec query '%s', args %+v does not match expected %+v", query, args, eq.args)
+	}
+
+	if eq.err != nil {
+		return nil, eq.err // mocked to return error
+	}
+
+	if eq.result == nil {
+		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
 	return eq.result, err
@@ -117,13 +118,6 @@ func (c *conn) Query(query string, args []driver.Value) (rw driver.Rows, err err
 	}
 
 	eq.triggered = true
-	if eq.err != nil {
-		return nil, eq.err // mocked to return error
-	}
-
-	if eq.rows == nil {
-		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, eq, eq)
-	}
 
 	defer argMatcherErrorHandler(&err) // converts panic to error in case of reflect value type mismatch
 
@@ -133,6 +127,14 @@ func (c *conn) Query(query string, args []driver.Value) (rw driver.Rows, err err
 
 	if !eq.argsMatches(args) {
 		return nil, fmt.Errorf("query '%s', args %+v does not match expected %+v", query, args, eq.args)
+	}
+
+	if eq.err != nil {
+		return nil, eq.err // mocked to return error
+	}
+
+	if eq.rows == nil {
+		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, eq, eq)
 	}
 
 	return eq.rows, err

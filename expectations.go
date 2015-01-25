@@ -76,7 +76,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.Value) bool {
 				return false
 			}
 		case reflect.String:
-			if vi.String() != ai.String() {
+			if ai.String() != ".+" && vi.String() != ai.String() {
 				return false
 			}
 		default:

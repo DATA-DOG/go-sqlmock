@@ -57,6 +57,13 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 	if !e.argsMatches(against) {
 		t.Error("arguments should match, but it did not")
 	}
+
+	e = &queryBasedExpectation{}
+	e.args = []driver.Value{5, ".+"}
+	against = []driver.Value{5, "stuff"}
+	if !e.argsMatches(against) {
+		t.Error("arguments should match, since the second argument is a wildcard")
+	}
 }
 
 func TestQueryExpectationSqlMatch(t *testing.T) {

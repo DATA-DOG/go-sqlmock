@@ -59,7 +59,11 @@ func TestMockQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Error("Unexpected error while trying to close rows")
+		}
+	}()
 	if !rows.Next() {
 		t.Error("it must have had one row as result, but got empty result set instead")
 	}
@@ -105,7 +109,11 @@ func TestMockQueryTypes(t *testing.T) {
 	if err != nil {
 		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Error("Unexpected error while trying to close rows")
+		}
+	}()
 	if !rows.Next() {
 		t.Error("it must have had one row as result, but got empty result set instead")
 	}
@@ -433,7 +441,11 @@ func TestRowBuilderAndNilTypes(t *testing.T) {
 	if err != nil {
 		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Error("Unexpected error while trying to close rows")
+		}
+	}()
 
 	// NullTime and NullInt are used from stubs_test.go
 	var (

@@ -7,6 +7,26 @@ import (
 	"time"
 )
 
+func TestIssue14EscapeSQL(t *testing.T) {
+	db, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	ExpectExec("INSERT INTO mytable\\(a, b\\)").
+		WithArgs("A", "B").
+		WillReturnResult(NewResult(1, 1))
+
+	_, err = db.Exec("INSERT INTO mytable(a, b) VALUES (?, ?)", "A", "B")
+	if err != nil {
+		t.Errorf("error '%s' was not expected, while inserting a row", err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Errorf("error '%s' was not expected while closing the database", err)
+	}
+}
+
 // test the case when db is not triggered and expectations
 // are not asserted on close
 func TestIssue4(t *testing.T) {

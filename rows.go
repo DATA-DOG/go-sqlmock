@@ -86,7 +86,12 @@ func (r *rows) FromCSVString(s string) Rows {
 
 		row := make([]driver.Value, len(r.cols))
 		for i, v := range res {
-			row[i] = []byte(strings.TrimSpace(v))
+			v := strings.TrimSpace(v)
+			if v == "NULL" {
+				row[i] = nil
+			} else {
+				row[i] = []byte(v)
+			}
 		}
 		r.rows = append(r.rows, row)
 	}
@@ -112,7 +117,11 @@ func RowsFromCSVString(columns []string, s string) driver.Rows {
 		row := make([]driver.Value, len(columns))
 		for i, v := range r {
 			v := strings.TrimSpace(v)
-			row[i] = []byte(v)
+			if v == "NULL" {
+				row[i] = nil
+			} else {
+				row[i] = []byte(v)
+			}
 		}
 		rs.rows = append(rs.rows, row)
 	}

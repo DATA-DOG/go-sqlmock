@@ -272,7 +272,7 @@ sqlmock.ExpectCommit().WillReturnError(fmt.Errorf("Deadlock occured"))
 ```
 
 In same fashion, we can expect queries to match arguments. If there are any, it must be matched.
-Instead of result we can return error..
+Instead of result we can return error.
 
 ``` go
 sqlmock.ExpectQuery("SELECT (.*) FROM orders").

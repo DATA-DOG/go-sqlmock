@@ -330,6 +330,8 @@ rs := sqlmock.ExpectPrepare().
 
 Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
 See **.travis.yml** for supported **go** versions
+Different use case, is to functionally test with a real database - [go-txdb](https://github.com/DATA-DOG/go-txdb)
+all database related actions are isolated within a single transaction so the database can remain in the same state.
 
 ## Changes
 

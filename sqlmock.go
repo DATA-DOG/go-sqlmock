@@ -57,6 +57,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net/url"
 	"regexp"
 )
 
@@ -77,6 +78,15 @@ type mockDriver struct {
 }
 
 func (d *mockDriver) Open(dsn string) (driver.Conn, error) {
+	if dsn != "" {
+		params, err := url.ParseQuery(dsn)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing DSN: %v", err)
+		}
+		if params.Get("id") != "" {
+			return mockConn(params.Get("id"))
+		}
+	}
 	return mock.conn, nil
 }
 

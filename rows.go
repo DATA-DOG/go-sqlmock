@@ -10,12 +10,22 @@ import (
 // Rows interface allows to construct rows
 // which also satisfies database/sql/driver.Rows interface
 type Rows interface {
-	driver.Rows // composed interface, supports sql driver.Rows
+	// composed interface, supports sql driver.Rows
+	driver.Rows
+
+	// AddRow composed from database driver.Value slice
+	// return the same instance to perform subsequent actions.
+	// Note that the number of values must match the number
+	// of columns
 	AddRow(...driver.Value) Rows
+
+	// FromCSVString build rows from csv string.
+	// return the same instance to perform subsequent actions.
+	// Note that the number of values must match the number
+	// of columns
 	FromCSVString(s string) Rows
 }
 
-// a struct which implements database/sql/driver.Rows
 type rows struct {
 	cols []string
 	rows [][]driver.Value
@@ -48,16 +58,13 @@ func (r *rows) Next(dest []driver.Value) error {
 	return nil
 }
 
-// NewRows allows Rows to be created from a group of
-// sql driver.Value or from the CSV string and
+// NewRows allows Rows to be created from a
+// sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
 func NewRows(columns []string) Rows {
 	return &rows{cols: columns}
 }
 
-// AddRow adds a row which is built from arguments
-// in the same column order, returns sql driver.Rows
-// compatible interface
 func (r *rows) AddRow(values ...driver.Value) Rows {
 	if len(values) != len(r.cols) {
 		panic("Expected number of values to match number of columns")
@@ -72,8 +79,6 @@ func (r *rows) AddRow(values ...driver.Value) Rows {
 	return r
 }
 
-// FromCSVString adds rows from CSV string.
-// Returns sql driver.Rows compatible interface
 func (r *rows) FromCSVString(s string) Rows {
 	res := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(res)
@@ -91,30 +96,4 @@ func (r *rows) FromCSVString(s string) Rows {
 		r.rows = append(r.rows, row)
 	}
 	return r
-}
-
-// RowsFromCSVString creates Rows from CSV string
-// to be used for mocked queries. Returns sql driver Rows interface
-// ** DEPRECATED ** will be removed in the future, use Rows.FromCSVString
-func RowsFromCSVString(columns []string, s string) driver.Rows {
-	rs := &rows{}
-	rs.cols = columns
-
-	r := strings.NewReader(strings.TrimSpace(s))
-	csvReader := csv.NewReader(r)
-
-	for {
-		r, err := csvReader.Read()
-		if err != nil || r == nil {
-			break
-		}
-
-		row := make([]driver.Value, len(columns))
-		for i, v := range r {
-			v := strings.TrimSpace(v)
-			row[i] = []byte(v)
-		}
-		rs.rows = append(rs.rows, row)
-	}
-	return rs
 }

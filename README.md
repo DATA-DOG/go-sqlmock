@@ -5,11 +5,24 @@
 
 This is a **mock** driver as **database/sql/driver** which is very flexible and pragmatic to
 manage and mock expected queries. All the expectations should be met and all queries and actions
-triggered should be mocked in order to pass a test.
+triggered should be mocked in order to pass a test. The package has no 3rd party dependencies.
+
+**NOTE:** regarding major issues #20 and #9 the api has changed to support concurrency and more than
+one database connection.
+
+If you need an old version, checkout **go-sqlmock** at gopkg.in:
+
+    go get gopkg.in/DATA-DOG/go-sqlmock.v0
+
+Otherwise use the **v1** branch from master.
 
 ## Install
 
     go get github.com/DATA-DOG/go-sqlmock
+
+Or take an older version:
+
+    go get gopkg.in/DATA-DOG/go-sqlmock.v0
 
 ## Use it with pleasure
 

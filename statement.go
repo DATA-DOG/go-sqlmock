@@ -5,12 +5,13 @@ import (
 )
 
 type statement struct {
-	conn  *conn
+	conn  *Sqlmock
 	query string
+	err   error
 }
 
 func (stmt *statement) Close() error {
-	return nil
+	return stmt.err
 }
 
 func (stmt *statement) NumInput() int {

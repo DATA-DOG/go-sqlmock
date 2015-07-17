@@ -60,7 +60,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 }
 
 func TestQueryExpectationSqlMatch(t *testing.T) {
-	e := &expectedExec{}
+	e := &ExpectedExec{}
 	e.sqlRegex = regexp.MustCompile("SELECT x FROM")
 	if !e.queryMatches("SELECT x FROM someting") {
 		t.Errorf("Sql must have matched the query")

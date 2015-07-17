@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+// used for examples
+var mock = &Sqlmock{}
+
+func ExampleNewErrorResult() {
+	result := NewErrorResult(fmt.Errorf("some error"))
+	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+}
+
+func ExampleNewResult() {
+	var lastInsertID, affected int64
+	result := NewResult(lastInsertID, affected)
+	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+}
+
 func TestShouldReturnValidSqlDriverResult(t *testing.T) {
 	result := NewResult(1, 2)
 	id, err := result.LastInsertId()

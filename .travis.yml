@@ -7,10 +7,6 @@ go:
   - tip
 
 script:
-  - go get github.com/kisielk/errcheck
-  - go get ./...
-
   - go test -v ./...
   - go test -race ./...
-  - errcheck github.com/DATA-DOG/go-sqlmock
-
+  # linter will follow

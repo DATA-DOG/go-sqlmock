@@ -17,19 +17,35 @@ type Rows interface {
 	// return the same instance to perform subsequent actions.
 	// Note that the number of values must match the number
 	// of columns
-	AddRow(...driver.Value) Rows
+	AddRow(columns ...driver.Value) Rows
 
 	// FromCSVString build rows from csv string.
 	// return the same instance to perform subsequent actions.
 	// Note that the number of values must match the number
 	// of columns
 	FromCSVString(s string) Rows
+
+	// RowError allows to set an error
+	// which will be returned when a given
+	// row number is read
+	RowError(row int, err error) Rows
+
+	// CloseError allows to set an error
+	// which will be returned by rows.Close
+	// function.
+	//
+	// The close error will be triggered only in cases
+	// when rows.Next() EOF was not yet reached, that is
+	// a default sql library behavior
+	CloseError(err error) Rows
 }
 
 type rows struct {
-	cols []string
-	rows [][]driver.Value
-	pos  int
+	cols     []string
+	rows     [][]driver.Value
+	pos      int
+	scanErr  map[int]error
+	closeErr error
 }
 
 func (r *rows) Columns() []string {
@@ -37,11 +53,7 @@ func (r *rows) Columns() []string {
 }
 
 func (r *rows) Close() error {
-	return nil
-}
-
-func (r *rows) Err() error {
-	return nil
+	return r.closeErr
 }
 
 // advances to next row
@@ -55,14 +67,24 @@ func (r *rows) Next(dest []driver.Value) error {
 		dest[i] = col
 	}
 
-	return nil
+	return r.scanErr[r.pos-1]
 }
 
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
 func NewRows(columns []string) Rows {
-	return &rows{cols: columns}
+	return &rows{cols: columns, scanErr: make(map[int]error)}
+}
+
+func (r *rows) CloseError(err error) Rows {
+	r.closeErr = err
+	return r
+}
+
+func (r *rows) RowError(row int, err error) Rows {
+	r.scanErr[row] = err
+	return r
 }
 
 func (r *rows) AddRow(values ...driver.Value) Rows {

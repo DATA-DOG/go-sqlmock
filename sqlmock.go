@@ -201,6 +201,7 @@ func (c *Sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 		return nil, t.err // mocked to return error
 	}
 
+	// remove when rows_test.go:186 is available, won't cause a BC
 	if t.rows == nil {
 		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, t, t)
 	}

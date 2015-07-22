@@ -2,6 +2,7 @@ package sqlmock
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"regexp"
 	"testing"
 	"time"
@@ -70,4 +71,14 @@ func TestQueryExpectationSqlMatch(t *testing.T) {
 	if !e.queryMatches("SELECT COUNT(x) FROM someting") {
 		t.Errorf("Sql must have matched the query")
 	}
+}
+
+func ExampleExpectExec() {
+	db, mock, _ := New()
+	result := NewErrorResult(fmt.Errorf("some error"))
+	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+	res, _ := db.Exec("INSERT something")
+	_, err := res.LastInsertId()
+	fmt.Println(err)
+	// Output: some error
 }

@@ -180,10 +180,7 @@ func TestQuerySingleRow(t *testing.T) {
 	}
 }
 
-// @TODO: the only way to mock columns error would be
-// to return nil instead of rows, but rows.Close will
-// panic due to a bug in go sql package
-func TODO_TestRowsColumnsError(t *testing.T) {
+func TestRowsScanError(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
 	if err != nil {
@@ -191,16 +188,27 @@ func TODO_TestRowsColumnsError(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectQuery("SELECT").WillReturnRows(nil)
+	r := NewRows([]string{"col1", "col2"}).AddRow("one", "two").AddRow("one", nil)
+	mock.ExpectQuery("SELECT").WillReturnRows(r)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
+	defer rs.Close()
 
-	_, err = rs.Columns()
+	var one, two string
+	if !rs.Next() || rs.Err() != nil || rs.Scan(&one, &two) != nil {
+		t.Fatal("unexpected error on first row scan")
+	}
+
+	if !rs.Next() || rs.Err() != nil {
+		t.Fatal("unexpected error on second row read")
+	}
+
+	err = rs.Scan(&one, &two)
 	if err == nil {
-		t.Fatal("expected an error for columns")
+		t.Fatal("expected an error for scan, but got none")
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

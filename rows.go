@@ -8,7 +8,8 @@ import (
 )
 
 // CSVColumnParser is a function which converts trimmed csv
-// column string to a []byte representation.
+// column string to a []byte representation. currently
+// transforms NULL to nil
 var CSVColumnParser = func(s string) []byte {
 	switch {
 	case strings.ToLower(s) == "null":
@@ -54,7 +55,7 @@ type rows struct {
 	cols     []string
 	rows     [][]driver.Value
 	pos      int
-	scanErr  map[int]error
+	nextErr  map[int]error
 	closeErr error
 }
 
@@ -77,14 +78,14 @@ func (r *rows) Next(dest []driver.Value) error {
 		dest[i] = col
 	}
 
-	return r.scanErr[r.pos-1]
+	return r.nextErr[r.pos-1]
 }
 
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
 func NewRows(columns []string) Rows {
-	return &rows{cols: columns, scanErr: make(map[int]error)}
+	return &rows{cols: columns, nextErr: make(map[int]error)}
 }
 
 func (r *rows) CloseError(err error) Rows {
@@ -93,7 +94,7 @@ func (r *rows) CloseError(err error) Rows {
 }
 
 func (r *rows) RowError(row int, err error) Rows {
-	r.scanErr[row] = err
+	r.nextErr[row] = err
 	return r
 }
 

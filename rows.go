@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+// CSVColumnParser is a function which converts trimmed csv
+// column string to a []byte representation.
+var CSVColumnParser = func(s string) []byte {
+	switch {
+	case strings.ToLower(s) == "null":
+		return nil
+	}
+	return []byte(s)
+}
+
 // Rows interface allows to construct rows
 // which also satisfies database/sql/driver.Rows interface
 type Rows interface {
@@ -113,7 +123,7 @@ func (r *rows) FromCSVString(s string) Rows {
 
 		row := make([]driver.Value, len(r.cols))
 		for i, v := range res {
-			row[i] = []byte(strings.TrimSpace(v))
+			row[i] = CSVColumnParser(strings.TrimSpace(v))
 		}
 		r.rows = append(r.rows, row)
 	}

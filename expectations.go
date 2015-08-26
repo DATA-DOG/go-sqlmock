@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"reflect"
 	"regexp"
+	"sync"
 )
 
 // Argument interface allows to match
@@ -16,11 +17,14 @@ type Argument interface {
 // an expectation interface
 type expectation interface {
 	fulfilled() bool
+	Lock()
+	Unlock()
 }
 
 // common expectation struct
 // satisfies the expectation interface
 type commonExpectation struct {
+	sync.Mutex
 	triggered bool
 	err       error
 }
@@ -182,6 +186,19 @@ type queryBasedExpectation struct {
 	commonExpectation
 	sqlRegex *regexp.Regexp
 	args     []driver.Value
+}
+
+func (e *queryBasedExpectation) attemptMatch(sql string, args []driver.Value) (ret bool) {
+	if !e.queryMatches(sql) {
+		return
+	}
+
+	defer recover() // ignore panic since we attempt a match
+
+	if e.argsMatches(args) {
+		return true
+	}
+	return
 }
 
 func (e *queryBasedExpectation) queryMatches(sql string) bool {

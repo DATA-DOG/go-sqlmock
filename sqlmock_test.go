@@ -3,6 +3,7 @@ package sqlmock
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -573,5 +574,46 @@ func TestArgumentReflectValueTypeError(t *testing.T) {
 	_, err = db.Query("SELECT * FROM sales WHERE x = ?", 5)
 	if err == nil {
 		t.Error("Expected error, but got none")
+	}
+}
+
+func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// note this line is important for unordered expectation matching
+	mock.MatchExpectationsInOrder = false
+
+	result := NewResult(1, 1)
+
+	mock.ExpectExec("^UPDATE one").WithArgs("one").WillReturnResult(result)
+	mock.ExpectExec("^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
+	mock.ExpectExec("^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
+
+	var wg sync.WaitGroup
+	queries := map[string][]interface{}{
+		"one":   []interface{}{"one"},
+		"two":   []interface{}{"one", "two"},
+		"three": []interface{}{"one", "two", "three"},
+	}
+
+	wg.Add(len(queries))
+	for table, args := range queries {
+		go func(tbl string, a []interface{}) {
+			if _, err := db.Exec("UPDATE "+tbl, a...); err != nil {
+				t.Errorf("error was not expected: %s", err)
+			}
+			wg.Done()
+		}(table, args)
+	}
+
+	wg.Wait()
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
 	}
 }

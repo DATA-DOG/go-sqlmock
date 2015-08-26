@@ -23,7 +23,12 @@ func ExampleNewResult() {
 	result := NewResult(lastInsertID, affected)
 	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
 	fmt.Println(mock.ExpectationsWereMet())
-	// Output: there is a remaining expectation *sqlmock.ExpectedExec which was not matched yet
+	// Output: there is a remaining expectation which was not matched: ExpectedExec => expecting Exec which:
+	//   - matches sql: '^INSERT (.+)'
+	//   - is without arguments
+	//   - should return Result having:
+	//       LastInsertId: 0
+	//       RowsAffected: 0
 }
 
 func TestShouldReturnValidSqlDriverResult(t *testing.T) {

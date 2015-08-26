@@ -2,8 +2,10 @@ package sqlmock
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -19,6 +21,7 @@ type expectation interface {
 	fulfilled() bool
 	Lock()
 	Unlock()
+	String() string
 }
 
 // common expectation struct
@@ -45,6 +48,15 @@ func (e *ExpectedClose) WillReturnError(err error) *ExpectedClose {
 	return e
 }
 
+// String returns string representation
+func (e *ExpectedClose) String() string {
+	msg := "ExpectedClose => expecting database Close"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
+}
+
 // ExpectedBegin is used to manage *sql.DB.Begin expectation
 // returned by *Sqlmock.ExpectBegin.
 type ExpectedBegin struct {
@@ -55,6 +67,15 @@ type ExpectedBegin struct {
 func (e *ExpectedBegin) WillReturnError(err error) *ExpectedBegin {
 	e.err = err
 	return e
+}
+
+// String returns string representation
+func (e *ExpectedBegin) String() string {
+	msg := "ExpectedBegin => expecting database transaction Begin"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
 }
 
 // ExpectedCommit is used to manage *sql.Tx.Commit expectation
@@ -69,6 +90,15 @@ func (e *ExpectedCommit) WillReturnError(err error) *ExpectedCommit {
 	return e
 }
 
+// String returns string representation
+func (e *ExpectedCommit) String() string {
+	msg := "ExpectedCommit => expecting transaction Commit"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
+}
+
 // ExpectedRollback is used to manage *sql.Tx.Rollback expectation
 // returned by *Sqlmock.ExpectRollback.
 type ExpectedRollback struct {
@@ -79,6 +109,15 @@ type ExpectedRollback struct {
 func (e *ExpectedRollback) WillReturnError(err error) *ExpectedRollback {
 	e.err = err
 	return e
+}
+
+// String returns string representation
+func (e *ExpectedRollback) String() string {
+	msg := "ExpectedRollback => expecting transaction Rollback"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
 }
 
 // ExpectedQuery is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
@@ -110,6 +149,37 @@ func (e *ExpectedQuery) WillReturnRows(rows driver.Rows) *ExpectedQuery {
 	return e
 }
 
+// String returns string representation
+func (e *ExpectedQuery) String() string {
+	msg := "ExpectedQuery => expecting Query or QueryRow which:"
+	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+
+	if len(e.args) == 0 {
+		msg += "\n  - is without arguments"
+	} else {
+		msg += "\n  - is with arguments:\n"
+		for i, arg := range e.args {
+			msg += fmt.Sprintf("    %d - %+v\n", i, arg)
+		}
+		msg = strings.TrimSpace(msg)
+	}
+
+	if e.rows != nil {
+		msg += "\n  - should return rows:\n"
+		rs, _ := e.rows.(*rows)
+		for i, row := range rs.rows {
+			msg += fmt.Sprintf("    %d - %+v\n", i, row)
+		}
+		msg = strings.TrimSpace(msg)
+	}
+
+	if e.err != nil {
+		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
+	}
+
+	return msg
+}
+
 // ExpectedExec is used to manage *sql.DB.Exec, *sql.Tx.Exec or *sql.Stmt.Exec expectations.
 // Returned by *Sqlmock.ExpectExec.
 type ExpectedExec struct {
@@ -129,6 +199,39 @@ func (e *ExpectedExec) WithArgs(args ...driver.Value) *ExpectedExec {
 func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
 	e.err = err
 	return e
+}
+
+// String returns string representation
+func (e *ExpectedExec) String() string {
+	msg := "ExpectedExec => expecting Exec which:"
+	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+
+	if len(e.args) == 0 {
+		msg += "\n  - is without arguments"
+	} else {
+		msg += "\n  - is with arguments:\n"
+		var margs []string
+		for i, arg := range e.args {
+			margs = append(margs, fmt.Sprintf("    %d - %+v", i, arg))
+		}
+		msg += strings.Join(margs, "\n")
+	}
+
+	if e.result != nil {
+		res, _ := e.result.(*result)
+		msg += "\n  - should return Result having:"
+		msg += fmt.Sprintf("\n      LastInsertId: %d", res.insertID)
+		msg += fmt.Sprintf("\n      RowsAffected: %d", res.rowsAffected)
+		if res.err != nil {
+			msg += fmt.Sprintf("\n      Error: %s", res.err)
+		}
+	}
+
+	if e.err != nil {
+		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
+	}
+
+	return msg
 }
 
 // WillReturnResult arranges for an expected Exec() to return a particular
@@ -178,6 +281,22 @@ func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 	eq.sqlRegex = e.sqlRegex
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
+}
+
+// String returns string representation
+func (e *ExpectedPrepare) String() string {
+	msg := "ExpectedPrepare => expecting Prepare statement which:"
+	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+
+	if e.err != nil {
+		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
+	}
+
+	if e.closeErr != nil {
+		msg += fmt.Sprintf("\n  - should return error on Close: %s", e.closeErr)
+	}
+
+	return msg
 }
 
 // query based expectation

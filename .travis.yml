@@ -1,4 +1,5 @@
 language: go
+sudo: false
 go:
   - 1.2
   - 1.3
@@ -9,4 +10,3 @@ go:
 script:
   - go test -v ./...
   - go test -race ./...
-  # linter will follow

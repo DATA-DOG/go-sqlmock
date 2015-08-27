@@ -617,3 +617,44 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 		t.Errorf("there were unfulfilled expections: %s", err)
 	}
 }
+
+func ExampleSqlmock_goroutines() {
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("failed to open sqlmock database:", err)
+	}
+	defer db.Close()
+
+	// note this line is important for unordered expectation matching
+	mock.MatchExpectationsInOrder = false
+
+	result := NewResult(1, 1)
+
+	mock.ExpectExec("^UPDATE one").WithArgs("one").WillReturnResult(result)
+	mock.ExpectExec("^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
+	mock.ExpectExec("^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
+
+	var wg sync.WaitGroup
+	queries := map[string][]interface{}{
+		"one":   []interface{}{"one"},
+		"two":   []interface{}{"one", "two"},
+		"three": []interface{}{"one", "two", "three"},
+	}
+
+	wg.Add(len(queries))
+	for table, args := range queries {
+		go func(tbl string, a []interface{}) {
+			if _, err := db.Exec("UPDATE "+tbl, a...); err != nil {
+				fmt.Println("error was not expected:", err)
+			}
+			wg.Done()
+		}(table, args)
+	}
+
+	wg.Wait()
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		fmt.Println("there were unfulfilled expections:", err)
+	}
+	// Output:
+}

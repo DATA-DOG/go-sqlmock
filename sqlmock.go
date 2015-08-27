@@ -3,7 +3,8 @@ Package sqlmock provides sql driver connection, which allows to test database
 interactions by expected calls and simulate their results or errors.
 
 It does not require any modifications to your source code in order to test
-and mock database operations.
+and mock database operations. It does not even require a real database in order
+to test your application.
 
 The driver allows to mock any sql driver method behavior. Concurrent actions
 are also supported.

@@ -1,4 +1,5 @@
 language: go
+sudo: false
 go:
   - 1.2
   - 1.3
@@ -7,10 +8,5 @@ go:
   - tip
 
 script:
-  - go get github.com/kisielk/errcheck
-  - go get ./...
-
   - go test -v ./...
   - go test -race ./...
-  - errcheck github.com/DATA-DOG/go-sqlmock
-

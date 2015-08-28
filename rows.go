@@ -7,19 +7,56 @@ import (
 	"strings"
 )
 
+// CSVColumnParser is a function which converts trimmed csv
+// column string to a []byte representation. currently
+// transforms NULL to nil
+var CSVColumnParser = func(s string) []byte {
+	switch {
+	case strings.ToLower(s) == "null":
+		return nil
+	}
+	return []byte(s)
+}
+
 // Rows interface allows to construct rows
 // which also satisfies database/sql/driver.Rows interface
 type Rows interface {
-	driver.Rows // composed interface, supports sql driver.Rows
-	AddRow(...driver.Value) Rows
+	// composed interface, supports sql driver.Rows
+	driver.Rows
+
+	// AddRow composed from database driver.Value slice
+	// return the same instance to perform subsequent actions.
+	// Note that the number of values must match the number
+	// of columns
+	AddRow(columns ...driver.Value) Rows
+
+	// FromCSVString build rows from csv string.
+	// return the same instance to perform subsequent actions.
+	// Note that the number of values must match the number
+	// of columns
 	FromCSVString(s string) Rows
+
+	// RowError allows to set an error
+	// which will be returned when a given
+	// row number is read
+	RowError(row int, err error) Rows
+
+	// CloseError allows to set an error
+	// which will be returned by rows.Close
+	// function.
+	//
+	// The close error will be triggered only in cases
+	// when rows.Next() EOF was not yet reached, that is
+	// a default sql library behavior
+	CloseError(err error) Rows
 }
 
-// a struct which implements database/sql/driver.Rows
 type rows struct {
-	cols []string
-	rows [][]driver.Value
-	pos  int
+	cols     []string
+	rows     [][]driver.Value
+	pos      int
+	nextErr  map[int]error
+	closeErr error
 }
 
 func (r *rows) Columns() []string {
@@ -27,11 +64,7 @@ func (r *rows) Columns() []string {
 }
 
 func (r *rows) Close() error {
-	return nil
-}
-
-func (r *rows) Err() error {
-	return nil
+	return r.closeErr
 }
 
 // advances to next row
@@ -45,19 +78,26 @@ func (r *rows) Next(dest []driver.Value) error {
 		dest[i] = col
 	}
 
-	return nil
+	return r.nextErr[r.pos-1]
 }
 
-// NewRows allows Rows to be created from a group of
-// sql driver.Value or from the CSV string and
+// NewRows allows Rows to be created from a
+// sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
 func NewRows(columns []string) Rows {
-	return &rows{cols: columns}
+	return &rows{cols: columns, nextErr: make(map[int]error)}
 }
 
-// AddRow adds a row which is built from arguments
-// in the same column order, returns sql driver.Rows
-// compatible interface
+func (r *rows) CloseError(err error) Rows {
+	r.closeErr = err
+	return r
+}
+
+func (r *rows) RowError(row int, err error) Rows {
+	r.nextErr[row] = err
+	return r
+}
+
 func (r *rows) AddRow(values ...driver.Value) Rows {
 	if len(values) != len(r.cols) {
 		panic("Expected number of values to match number of columns")
@@ -72,8 +112,6 @@ func (r *rows) AddRow(values ...driver.Value) Rows {
 	return r
 }
 
-// FromCSVString adds rows from CSV string.
-// Returns sql driver.Rows compatible interface
 func (r *rows) FromCSVString(s string) Rows {
 	res := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(res)
@@ -86,35 +124,9 @@ func (r *rows) FromCSVString(s string) Rows {
 
 		row := make([]driver.Value, len(r.cols))
 		for i, v := range res {
-			row[i] = []byte(strings.TrimSpace(v))
+			row[i] = CSVColumnParser(strings.TrimSpace(v))
 		}
 		r.rows = append(r.rows, row)
 	}
 	return r
-}
-
-// RowsFromCSVString creates Rows from CSV string
-// to be used for mocked queries. Returns sql driver Rows interface
-// ** DEPRECATED ** will be removed in the future, use Rows.FromCSVString
-func RowsFromCSVString(columns []string, s string) driver.Rows {
-	rs := &rows{}
-	rs.cols = columns
-
-	r := strings.NewReader(strings.TrimSpace(s))
-	csvReader := csv.NewReader(r)
-
-	for {
-		r, err := csvReader.Read()
-		if err != nil || r == nil {
-			break
-		}
-
-		row := make([]driver.Value, len(columns))
-		for i, v := range r {
-			v := strings.TrimSpace(v)
-			row[i] = []byte(v)
-		}
-		rs.rows = append(rs.rows, row)
-	}
-	return rs
 }

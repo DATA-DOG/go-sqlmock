@@ -5,11 +5,7 @@ import (
 	"strings"
 )
 
-var re *regexp.Regexp
-
-func init() {
-	re = regexp.MustCompile("\\s+")
-}
+var re = regexp.MustCompile("\\s+")
 
 // strip out new lines and trim spaces
 func stripQuery(q string) (s string) {

@@ -5,336 +5,153 @@
 
 This is a **mock** driver as **database/sql/driver** which is very flexible and pragmatic to
 manage and mock expected queries. All the expectations should be met and all queries and actions
-triggered should be mocked in order to pass a test.
+triggered should be mocked in order to pass a test. The package has no 3rd party dependencies.
+
+**NOTE:** regarding major issues #20 and #9 the **api** has changed to support concurrency and more than
+one database connection.
+
+If you need an old version, checkout **go-sqlmock** at gopkg.in:
+
+    go get gopkg.in/DATA-DOG/go-sqlmock.v0
+
+Otherwise use the **v1** branch from master which should be stable afterwards, because all the issues which
+were known will be fixed in this version.
 
 ## Install
 
-    go get github.com/DATA-DOG/go-sqlmock
+    go get gopkg.in/DATA-DOG/go-sqlmock.v1
 
-## Use it with pleasure
+Or take an older version:
 
-An example of some database interaction which you may want to test:
+    go get gopkg.in/DATA-DOG/go-sqlmock.v0
+
+## Documentation and Examples
+
+Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock) for general examples and public api reference.
+See **.travis.yml** for supported **go** versions.
+Different use case, is to functionally test with a real database - [go-txdb](https://github.com/DATA-DOG/go-txdb)
+all database related actions are isolated within a single transaction so the database can remain in the same state.
+
+See implementation examples:
+
+- [blog API server](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/blog)
+- [the same orders example](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/orders)
+
+### Something you may want to test
 
 ``` go
 package main
 
-import (
-    "database/sql"
-    _ "github.com/go-sql-driver/mysql"
-    "github.com/kisielk/sqlstruct"
-    "fmt"
-    "log"
-)
+import "database/sql"
 
-const ORDER_PENDING = 0
-const ORDER_CANCELLED = 1
+func recordStats(db *sql.DB, userID, productID int64) (err error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return
+	}
 
-type User struct {
-    Id int `sql:"id"`
-    Username string `sql:"username"`
-    Balance float64 `sql:"balance"`
-}
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
 
-type Order struct {
-    Id int `sql:"id"`
-    Value float64 `sql:"value"`
-    ReservedFee float64 `sql:"reserved_fee"`
-    Status int `sql:"status"`
-}
-
-func cancelOrder(id int, db *sql.DB) (err error) {
-    tx, err := db.Begin()
-    if err != nil {
-        return
-    }
-
-    var order Order
-    var user User
-    sql := fmt.Sprintf(`
-SELECT %s, %s
-FROM orders AS o
-INNER JOIN users AS u ON o.buyer_id = u.id
-WHERE o.id = ?
-FOR UPDATE`,
-    sqlstruct.ColumnsAliased(order, "o"),
-    sqlstruct.ColumnsAliased(user, "u"))
-
-    // fetch order to cancel
-    rows, err := tx.Query(sql, id)
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-
-    defer rows.Close()
-    // no rows, nothing to do
-    if !rows.Next() {
-        tx.Rollback()
-        return
-    }
-
-    // read order
-    err = sqlstruct.ScanAliased(&order, rows, "o")
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-
-    // ensure order status
-    if order.Status != ORDER_PENDING {
-        tx.Rollback()
-        return
-    }
-
-    // read user
-    err = sqlstruct.ScanAliased(&user, rows, "u")
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-    rows.Close() // manually close before other prepared statements
-
-    // refund order value
-    sql = "UPDATE users SET balance = balance + ? WHERE id = ?"
-    refundStmt, err := tx.Prepare(sql)
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-    defer refundStmt.Close()
-    _, err = refundStmt.Exec(order.Value + order.ReservedFee, user.Id)
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-
-    // update order status
-    order.Status = ORDER_CANCELLED
-    sql = "UPDATE orders SET status = ?, updated = NOW() WHERE id = ?"
-    orderUpdStmt, err := tx.Prepare(sql)
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-    defer orderUpdStmt.Close()
-    _, err = orderUpdStmt.Exec(order.Status, order.Id)
-    if err != nil {
-        tx.Rollback()
-        return
-    }
-    return tx.Commit()
+	if _, err = tx.Exec("UPDATE products SET views = views + 1"); err != nil {
+		return
+	}
+	if _, err = tx.Exec("INSERT INTO product_viewers (user_id, product_id) VALUES (?, ?)", userID, productID); err != nil {
+		return
+	}
+	return
 }
 
 func main() {
-    db, err := sql.Open("mysql", "root:nimda@/test")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer db.Close()
-    err = cancelOrder(1, db)
-    if err != nil {
-        log.Fatal(err)
-    }
+	// @NOTE: the real connection is not required for tests
+	db, err := sql.Open("mysql", "root@/blog")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	if err = recordStats(db, 1 /*some user id*/, 5 /*some product id*/); err != nil {
+		panic(err)
+	}
 }
 ```
 
-And the clean nice test:
+### Tests with sqlmock
 
 ``` go
 package main
 
 import (
-    "database/sql"
-    "github.com/DATA-DOG/go-sqlmock"
-    "testing"
-    "fmt"
+	"fmt"
+	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
-// will test that order with a different status, cannot be cancelled
-func TestShouldNotCancelOrderWithNonPendingStatus(t *testing.T) {
-    // open database stub
-    db, err := sqlmock.New()
-    if err != nil {
-        t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
-    }
+// a successful case
+func TestShouldUpdateStats(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
 
-    // columns are prefixed with "o" since we used sqlstruct to generate them
-    columns := []string{"o_id", "o_status"}
-    // expect transaction begin
-    sqlmock.ExpectBegin()
-    // expect query to fetch order and user, match it with regexp
-    sqlmock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
-        WithArgs(1).
-        WillReturnRows(sqlmock.NewRows(columns).FromCSVString("1,1"))
-    // expect transaction rollback, since order status is "cancelled"
-    sqlmock.ExpectRollback()
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("INSERT INTO product_viewers").WithArgs(2, 3).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
 
-    // run the cancel order function
-    err = cancelOrder(1, db)
-    if err != nil {
-        t.Errorf("Expected no error, but got %s instead", err)
-    }
-    // db.Close() ensures that all expectations have been met
-    if err = db.Close(); err != nil {
-        t.Errorf("Error '%s' was not expected while closing the database", err)
-    }
+	// now we execute our method
+	if err = recordStats(db, 2, 3); err != nil {
+		t.Errorf("error was not expected while updating stats: %s", err)
+	}
+
+	// we make sure that all expectations were met
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
 }
 
-// will test order cancellation
-func TestShouldRefundUserWhenOrderIsCancelled(t *testing.T) {
-    // open database stub
-    db, err := sqlmock.New()
-    if err != nil {
-        t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
-    }
+// a failing test case
+func TestShouldRollbackStatUpdatesOnFailure(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
 
-    // columns are prefixed with "o" since we used sqlstruct to generate them
-    columns := []string{"o_id", "o_status", "o_value", "o_reserved_fee", "u_id", "u_balance"}
-    // expect transaction begin
-    sqlmock.ExpectBegin()
-    // expect query to fetch order and user, match it with regexp
-    sqlmock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
-        WithArgs(1).
-        WillReturnRows(sqlmock.NewRows(columns).AddRow(1, 0, 25.75, 3.25, 2, 10.00))
-    // expect user balance update
-    sqlmock.ExpectExec("UPDATE users SET balance").
-        WithArgs(25.75 + 3.25, 2). // refund amount, user id
-        WillReturnResult(sqlmock.NewResult(0, 1)) // no insert id, 1 affected row
-    // expect order status update
-    sqlmock.ExpectExec("UPDATE orders SET status").
-        WithArgs(ORDER_CANCELLED, 1). // status, id
-        WillReturnResult(sqlmock.NewResult(0, 1)) // no insert id, 1 affected row
-    // expect a transaction commit
-    sqlmock.ExpectCommit()
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("INSERT INTO product_viewers").
+		WithArgs(2, 3).
+		WillReturnError(fmt.Errorf("some error"))
+	mock.ExpectRollback()
 
-    // run the cancel order function
-    err = cancelOrder(1, db)
-    if err != nil {
-        t.Errorf("Expected no error, but got %s instead", err)
-    }
-    // db.Close() ensures that all expectations have been met
-    if err = db.Close(); err != nil {
-        t.Errorf("Error '%s' was not expected while closing the database", err)
-    }
+	// now we execute our method
+	if err = recordStats(db, 2, 3); err == nil {
+		t.Errorf("was expecting an error, but there was none")
+	}
+
+	// we make sure that all expectations were met
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
 }
-
-// will test order cancellation
-func TestShouldRollbackOnError(t *testing.T) {
-    // open database stub
-    db, err := sqlmock.New()
-    if err != nil {
-        t.Errorf("An error '%s' was not expected when opening a stub database connection", err)
-    }
-
-    // expect transaction begin
-    sqlmock.ExpectBegin()
-    // expect query to fetch order and user, match it with regexp
-    sqlmock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
-        WithArgs(1).
-        WillReturnError(fmt.Errorf("Some error"))
-    // should rollback since error was returned from query execution
-    sqlmock.ExpectRollback()
-
-    // run the cancel order function
-    err = cancelOrder(1, db)
-    // error should return back
-    if err == nil {
-        t.Error("Expected error, but got none")
-    }
-    // db.Close() ensures that all expectations have been met
-    if err = db.Close(); err != nil {
-        t.Errorf("Error '%s' was not expected while closing the database", err)
-    }
-}
-```
-
-## Expectations
-
-All **Expect** methods return a **Mock** interface which allow you to describe
-expectations in more details: return an error, expect specific arguments, return rows and so on.
-**NOTE:** that if you call **WithArgs** on a non query based expectation, it will panic
-
-A **Mock** interface:
-
-``` go
-type Mock interface {
-	WithArgs(...driver.Value) Mock
-	WillReturnError(error) Mock
-	WillReturnRows(driver.Rows) Mock
-	WillReturnResult(driver.Result) Mock
-}
-```
-
-As an example we can expect a transaction commit and simulate an error for it:
-
-``` go
-sqlmock.ExpectCommit().WillReturnError(fmt.Errorf("Deadlock occured"))
-```
-
-In same fashion, we can expect queries to match arguments. If there are any, it must be matched.
-Instead of result we can return error.
-
-``` go
-sqlmock.ExpectQuery("SELECT (.*) FROM orders").
-	WithArgs("string value").
-	WillReturnRows(sqlmock.NewRows([]string{"col"}).AddRow("val"))
-```
-
-**NOTE:** it matches a regular expression. Some regex special characters must be escaped if you want to match them.
-For example if we want to match a subselect:
-
-``` go
-sqlmock.ExpectQuery("SELECT (.*) FROM orders WHERE id IN \\(SELECT id FROM finished WHERE status = 1\\)").
-	WithArgs("string value").
-	WillReturnRows(sqlmock.NewRows([]string{"col"}).AddRow("val"))
-```
-
-**WithArgs** expectation, compares values based on their type, for usual values like **string, float, int**
-it matches the actual value. Types like **time** are compared only by type. Other types might require different ways
-to compare them correctly, this may be improved.
-
-You can build rows either from CSV string or from interface values:
-
-**Rows** interface, which satisfies sql driver.Rows:
-
-``` go
-type Rows interface {
-	AddRow(...driver.Value) Rows
-	FromCSVString(s string) Rows
-	Next([]driver.Value) error
-	Columns() []string
-	Close() error
-}
-```
-
-Example for to build rows:
-
-``` go
-rs := sqlmock.NewRows([]string{"column1", "column2"}).
-	FromCSVString("one,1\ntwo,2").
-	AddRow("three", 3)
-```
-
-**Prepare** will ignore other expectations if ExpectPrepare not set. When set, can expect normal result or simulate an error:
-
-``` go
-rs := sqlmock.ExpectPrepare().
-    WillReturnError(fmt.Errorf("Query prepare failed"))
 ```
 
 ## Run tests
 
-    go test
-
-## Documentation
-
-Visit [godoc](http://godoc.org/github.com/DATA-DOG/go-sqlmock)
-See **.travis.yml** for supported **go** versions
-Different use case, is to functionally test with a real database - [go-txdb](https://github.com/DATA-DOG/go-txdb)
-all database related actions are isolated within a single transaction so the database can remain in the same state.
+    go test -race
 
 ## Changes
 
+- **2015-08-27** - **v1** api change, concurrency support, all known issues fixed.
 - **2014-08-16** instead of **panic** during reflect type mismatch when comparing query arguments - now return error
 - **2014-08-14** added **sqlmock.NewErrorResult** which gives an option to return driver.Result with errors for
 interface methods, see [issue](https://github.com/DATA-DOG/go-sqlmock/issues/5)

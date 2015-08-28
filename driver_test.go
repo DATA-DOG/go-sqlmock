@@ -25,14 +25,15 @@ func TestShouldOpenConnectionIssue15(t *testing.T) {
 		t.Errorf("expected 1 connection in pool, but there is: %d", len(pool.conns))
 	}
 
-	if mock.opened != 1 {
-		t.Errorf("expected 1 connection on mock to be opened, but there is: %d", mock.opened)
+	smock, _ := mock.(*sqlmock)
+	if smock.opened != 1 {
+		t.Errorf("expected 1 connection on mock to be opened, but there is: %d", smock.opened)
 	}
 
 	// defer so the rows gets closed first
 	defer func() {
-		if mock.opened != 0 {
-			t.Errorf("expected no connections on mock to be opened, but there is: %d", mock.opened)
+		if smock.opened != 0 {
+			t.Errorf("expected no connections on mock to be opened, but there is: %d", smock.opened)
 		}
 	}()
 
@@ -49,8 +50,8 @@ func TestShouldOpenConnectionIssue15(t *testing.T) {
 	}
 
 	// now there should be two connections open
-	if mock.opened != 2 {
-		t.Errorf("expected 2 connection on mock to be opened, but there is: %d", mock.opened)
+	if smock.opened != 2 {
+		t.Errorf("expected 2 connection on mock to be opened, but there is: %d", smock.opened)
 	}
 
 	mock.ExpectClose()
@@ -59,8 +60,8 @@ func TestShouldOpenConnectionIssue15(t *testing.T) {
 	}
 
 	// one is still reserved for rows
-	if mock.opened != 1 {
-		t.Errorf("expected 1 connection on mock to be still reserved for rows, but there is: %d", mock.opened)
+	if smock.opened != 1 {
+		t.Errorf("expected 1 connection on mock to be still reserved for rows, but there is: %d", smock.opened)
 	}
 }
 

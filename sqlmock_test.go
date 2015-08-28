@@ -586,7 +586,7 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 	defer db.Close()
 
 	// note this line is important for unordered expectation matching
-	mock.MatchExpectationsInOrder = false
+	mock.MatchExpectationsInOrder(false)
 
 	result := NewResult(1, 1)
 
@@ -626,7 +626,7 @@ func ExampleSqlmock_goroutines() {
 	defer db.Close()
 
 	// note this line is important for unordered expectation matching
-	mock.MatchExpectationsInOrder = false
+	mock.MatchExpectationsInOrder(false)
 
 	result := NewResult(1, 1)
 

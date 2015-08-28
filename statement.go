@@ -5,7 +5,7 @@ import (
 )
 
 type statement struct {
-	conn  *Sqlmock
+	conn  *sqlmock
 	query string
 	err   error
 }

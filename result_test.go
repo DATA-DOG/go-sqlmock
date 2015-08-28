@@ -6,7 +6,7 @@ import (
 )
 
 // used for examples
-var mock = &Sqlmock{}
+var mock = &sqlmock{}
 
 func ExampleNewErrorResult() {
 	db, mock, _ := New()

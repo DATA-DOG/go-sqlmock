@@ -247,7 +247,7 @@ func (e *ExpectedExec) WillReturnResult(result driver.Result) *ExpectedExec {
 // Returned by *Sqlmock.ExpectPrepare.
 type ExpectedPrepare struct {
 	commonExpectation
-	mock      *Sqlmock
+	mock      *sqlmock
 	sqlRegex  *regexp.Regexp
 	statement driver.Stmt
 	closeErr  error

@@ -3,7 +3,13 @@ package sqlmock
 import (
 	"fmt"
 	"testing"
+
+	"github.com/jinzhu/gorm"
 )
+
+type void struct{}
+
+func (void) Print(...interface{}) {}
 
 func ExampleNew() {
 	db, mock, err := New()
@@ -14,6 +20,33 @@ func ExampleNew() {
 	defer db.Close()
 	// now we can expect operations performed on db
 	mock.ExpectBegin().WillReturnError(fmt.Errorf("an error will occur on db.Begin() call"))
+}
+
+func ExampleNewWithDSN() {
+	_, mock, err := NewWithDSN("mydsn for gorm")
+	if err != nil {
+		fmt.Println("expected no error, but got:", err)
+		return
+	}
+	// use the same dsn to initialize a connection
+	db, err := gorm.Open("sqlmock", "mydsn for gorm")
+	if err != nil {
+		fmt.Println("expected no error from gorm, but got:", err)
+		return
+	}
+	defer db.Close()
+	db.SetLogger(void{}) // sad - nil panics
+
+	// now we can expect operations performed on db
+	mock.ExpectBegin().WillReturnError(fmt.Errorf("an error will occur on db.Begin() call"))
+
+	txconn := db.Begin()
+	for _, err := range txconn.GetErrors() {
+		fmt.Println(err.Error())
+	}
+
+	// Output: `sqlmock` is not officially supported, running under compatibility mode.
+	// an error will occur on db.Begin() call
 }
 
 func TestShouldOpenConnectionIssue15(t *testing.T) {

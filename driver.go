@@ -39,7 +39,7 @@ func (d *mockDriver) Open(dsn string) (driver.Conn, error) {
 // and a mock to manage expectations.
 // Pings db so that all expectations could be
 // asserted.
-func New() (db *sql.DB, mock Sqlmock, err error) {
+func New() (*sql.DB, Sqlmock, error) {
 	pool.Lock()
 	dsn := fmt.Sprintf("sqlmock_db_%d", pool.counter)
 	pool.counter++
@@ -48,9 +48,31 @@ func New() (db *sql.DB, mock Sqlmock, err error) {
 	pool.conns[dsn] = smock
 	pool.Unlock()
 
-	db, err = sql.Open("sqlmock", dsn)
-	if err != nil {
-		return
+	return smock.open()
+}
+
+// NewWithDSN creates sqlmock database connection
+// with a specific DSN and a mock to manage expectations.
+// Pings db so that all expectations could be asserted.
+//
+// This method is introduced because of sql abstraction
+// libraries, which do not provide a way to initialize
+// with sql.DB instance. For example GORM library.
+//
+// Note, it will error if attempted to create with an
+// already used dsn
+//
+// It is not recommended to use this method, unless you
+// really need it and there is no other way around.
+func NewWithDSN(dsn string) (*sql.DB, Sqlmock, error) {
+	pool.Lock()
+	if _, ok := pool.conns[dsn]; ok {
+		pool.Unlock()
+		return nil, nil, fmt.Errorf("cannot create a new mock database with the same dsn: %s", dsn)
 	}
-	return db, smock, db.Ping()
+	smock := &sqlmock{dsn: dsn, drv: pool, ordered: true}
+	pool.conns[dsn] = smock
+	pool.Unlock()
+
+	return smock.open()
 }

@@ -12,6 +12,7 @@ are also supported.
 package sqlmock
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -77,6 +78,14 @@ type sqlmock struct {
 	drv     *mockDriver
 
 	expected []expectation
+}
+
+func (s *sqlmock) open() (*sql.DB, Sqlmock, error) {
+	db, err := sql.Open("sqlmock", s.dsn)
+	if err != nil {
+		return db, s, err
+	}
+	return db, s, db.Ping()
 }
 
 func (c *sqlmock) ExpectClose() *ExpectedClose {

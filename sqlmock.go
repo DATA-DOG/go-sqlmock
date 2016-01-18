@@ -147,7 +147,7 @@ func (c *sqlmock) Close() error {
 
 func (c *sqlmock) ExpectationsWereMet() error {
 	for _, e := range c.expected {
-		if !e.fulfilled() {
+		if !e.check() {
 			return fmt.Errorf("there is a remaining expectation which was not matched: %s", e)
 		}
 	}
@@ -276,6 +276,9 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 	var expected *ExpectedPrepare
 	var fulfilled int
 	var ok bool
+	
+	query = stripQuery(query)
+	
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -285,7 +288,11 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 		}
 
 		if expected, ok = next.(*ExpectedPrepare); ok {
-			break
+			if expected.sqlRegex.MatchString(query) {
+				break
+			} else {
+				expected, ok = nil, false
+			}
 		}
 
 		next.Unlock()
@@ -294,7 +301,6 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 		}
 	}
 
-	query = stripQuery(query)
 	if expected == nil {
 		msg := "call to Prepare '%s' query was not expected"
 		if fulfilled == len(c.expected) {
@@ -309,7 +315,7 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
-	e := &ExpectedPrepare{sqlRegex: regexp.MustCompile(sqlRegexStr), mock: c}
+	e := &ExpectedPrepare{sqlRegex: regexp.MustCompile(stripQuery(sqlRegexStr)), mock: c}
 	c.expected = append(c.expected, e)
 	return e
 }

@@ -1,5 +1,4 @@
 language: go
-sudo: false
 
 go:
   - 1.2
@@ -9,5 +8,4 @@ go:
   - release
   - tip
 
-script:
-  - go test -race
+script: go test -race

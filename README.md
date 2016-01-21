@@ -3,25 +3,22 @@
 
 # Sql driver mock for Golang
 
-This is a **mock** driver as **database/sql/driver** which is very flexible and pragmatic to
-manage and mock expected queries. All the expectations should be met and all queries and actions
-triggered should be mocked in order to pass a test. The package has no 3rd party dependencies.
+**sqlmock** is a mock library implementing [sql/driver](https://godoc.org/database/sql/driver). Which has one and only
+purpose - to simulate any **sql** driver behavior in tests, without needing a real database connection. It helps to
+maintain correct **TDD** workflow.
 
-**NOTE:** regarding major issues #20 and #9 the **api** has changed to support concurrency and more than
-one database connection.
-
-If you need an old version, checkout **go-sqlmock** at gopkg.in:
-
-    go get gopkg.in/DATA-DOG/go-sqlmock.v0
-
-Otherwise use the **v1** branch from master which should be stable afterwards, because all the issues which
-were known will be fixed in this version.
+- this library is now complete and stable. (you may not find new changes for this reason)
+- supports concurrency and multiple connections.
+- does not require any modifications to your source code.
+- the driver allows to mock any sql driver method behavior.
+- has strict by default expectation order matching.
+- has no vendor dependencies.
 
 ## Install
 
     go get gopkg.in/DATA-DOG/go-sqlmock.v1
 
-Or take an older version:
+If you need an old version, checkout **go-sqlmock** at gopkg.in:
 
     go get gopkg.in/DATA-DOG/go-sqlmock.v0
 

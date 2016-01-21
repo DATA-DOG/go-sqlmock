@@ -73,7 +73,7 @@ func TestQueryExpectationSqlMatch(t *testing.T) {
 	}
 }
 
-func ExampleExpectExec() {
+func ExampleExpectedExec() {
 	db, mock, _ := New()
 	result := NewErrorResult(fmt.Errorf("some error"))
 	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)

@@ -1,13 +1,12 @@
 /*
-Package sqlmock provides sql driver connection, which allows to test database
-interactions by expected calls and simulate their results or errors.
+Package sqlmock is a mock library implementing sql driver. Which has one and only
+purpose - to simulate any sql driver behavior in tests, without needing a real
+database connection. It helps to maintain correct **TDD** workflow.
 
 It does not require any modifications to your source code in order to test
-and mock database operations. It does not even require a real database in order
-to test your application.
+and mock database operations. Supports concurrency and multiple database mocking.
 
-The driver allows to mock any sql driver method behavior. Concurrent actions
-are also supported.
+The driver allows to mock any sql driver method behavior.
 */
 package sqlmock
 
@@ -80,12 +79,12 @@ type sqlmock struct {
 	expected []expectation
 }
 
-func (s *sqlmock) open() (*sql.DB, Sqlmock, error) {
-	db, err := sql.Open("sqlmock", s.dsn)
+func (c *sqlmock) open() (*sql.DB, Sqlmock, error) {
+	db, err := sql.Open("sqlmock", c.dsn)
 	if err != nil {
-		return db, s, err
+		return db, c, err
 	}
-	return db, s, db.Ping()
+	return db, c, db.Ping()
 }
 
 func (c *sqlmock) ExpectClose() *ExpectedClose {

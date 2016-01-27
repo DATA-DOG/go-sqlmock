@@ -60,8 +60,37 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 	}
 }
 
+func TestQueryExpectationArgComparisonBool(t *testing.T) {
+	var e *queryBasedExpectation
+
+	e = &queryBasedExpectation{args: []driver.Value{true}}
+	against := []driver.Value{true}
+	if !e.argsMatches(against) {
+		t.Error("arguments should match, since arguments are the same")
+	}
+
+	e = &queryBasedExpectation{args: []driver.Value{false}}
+	against = []driver.Value{false}
+	if !e.argsMatches(against) {
+		t.Error("arguments should match, since argument are the same")
+	}
+
+	e = &queryBasedExpectation{args: []driver.Value{true}}
+	against = []driver.Value{false}
+	if e.argsMatches(against) {
+		t.Error("arguments should not match, since argument is different")
+	}
+
+	e = &queryBasedExpectation{args: []driver.Value{false}}
+	against = []driver.Value{true}
+	if e.argsMatches(against) {
+		t.Error("arguments should not match, since argument is different")
+	}
+}
+
 func TestQueryExpectationSqlMatch(t *testing.T) {
 	e := &ExpectedExec{}
+
 	e.sqlRegex = regexp.MustCompile("SELECT x FROM")
 	if !e.queryMatches("SELECT x FROM someting") {
 		t.Errorf("Sql must have matched the query")

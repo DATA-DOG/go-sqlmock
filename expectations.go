@@ -358,6 +358,10 @@ func (e *queryBasedExpectation) argsMatches(args []driver.Value) bool {
 			if vi.String() != ai.String() {
 				return false
 			}
+		case reflect.Bool:
+			if vi.Bool() != ai.Bool() {
+				return false
+			}
 		default:
 			// compare types like time.Time based on type only
 			if vi.Kind() != ai.Kind() {

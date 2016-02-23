@@ -8,13 +8,6 @@ import (
 	"sync"
 )
 
-// Argument interface allows to match
-// any argument in specific way when used with
-// ExpectedQuery and ExpectedExec expectations.
-type Argument interface {
-	Match(driver.Value) bool
-}
-
 // an expectation interface
 type expectation interface {
 	fulfilled() bool

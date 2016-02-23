@@ -8,13 +8,6 @@ import (
 	"time"
 )
 
-type matcher struct {
-}
-
-func (m matcher) Match(driver.Value) bool {
-	return true
-}
-
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{}
 	against := []driver.Value{int64(5)}
@@ -53,7 +46,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 		t.Error("arguments should match, but it did not")
 	}
 
-	e.args = []driver.Value{5, matcher{}}
+	e.args = []driver.Value{5, AnyArg()}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, but it did not: %s", err)
 	}

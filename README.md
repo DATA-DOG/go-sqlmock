@@ -188,7 +188,8 @@ It only asserts that argument is of `time.Time` type.
 
 ## Changes
 
-
+- **2016-02-23** - added **sqlmock.AnyArg()** function to provide any kind
+  of argument matcher.
 - **2016-02-23** - convert expected arguments to driver.Value as natural
   driver does, the change may affect time.Time comparison and will be
   stricter. See [issue](https://github.com/DATA-DOG/go-sqlmock/issues/31).

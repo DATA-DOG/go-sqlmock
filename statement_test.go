@@ -1,11 +1,11 @@
+// +build go1.6
+
 package sqlmock
 
 import (
 	"errors"
 	"testing"
 )
-
-// +build go1.6
 
 func TestExpectedPreparedStatemtCloseError(t *testing.T) {
 	conn, mock, err := New()

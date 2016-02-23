@@ -14,7 +14,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"reflect"
 	"regexp"
 )
 
@@ -216,7 +215,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 			return nil, fmt.Errorf("call to exec query '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
 		if exec, ok := next.(*ExpectedExec); ok {
-			if exec.attemptMatch(query, args) {
+			if err := exec.attemptMatch(query, args); err == nil {
 				expected = exec
 				break
 			}
@@ -233,24 +232,13 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 
 	defer expected.Unlock()
 	expected.triggered = true
-	// converts panic to error in case of reflect value type mismatch
-	defer func(errp *error, exp *ExpectedExec, q string, a []driver.Value) {
-		if e := recover(); e != nil {
-			if se, ok := e.(*reflect.ValueError); ok { // catch reflect error, failed type conversion
-				msg := "exec query \"%s\", args \"%+v\" failed to match with error \"%s\" expectation: %s"
-				*errp = fmt.Errorf(msg, q, a, se, exp)
-			} else {
-				panic(e) // overwise if unknown error panic
-			}
-		}
-	}(&err, expected, query, args)
 
 	if !expected.queryMatches(query) {
 		return nil, fmt.Errorf("exec query '%s', does not match regex '%s'", query, expected.sqlRegex.String())
 	}
 
-	if !expected.argsMatches(args) {
-		return nil, fmt.Errorf("exec query '%s', args %+v does not match expected %+v", query, args, expected.args)
+	if err := expected.argsMatches(args); err != nil {
+		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
 	if expected.err != nil {
@@ -335,7 +323,7 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 			return nil, fmt.Errorf("call to query '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
 		if qr, ok := next.(*ExpectedQuery); ok {
-			if qr.attemptMatch(query, args) {
+			if err := qr.attemptMatch(query, args); err == nil {
 				expected = qr
 				break
 			}
@@ -353,24 +341,13 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 
 	defer expected.Unlock()
 	expected.triggered = true
-	// converts panic to error in case of reflect value type mismatch
-	defer func(errp *error, exp *ExpectedQuery, q string, a []driver.Value) {
-		if e := recover(); e != nil {
-			if se, ok := e.(*reflect.ValueError); ok { // catch reflect error, failed type conversion
-				msg := "query \"%s\", args \"%+v\" failed to match with error \"%s\" expectation: %s"
-				*errp = fmt.Errorf(msg, q, a, se, exp)
-			} else {
-				panic(e) // overwise if unknown error panic
-			}
-		}
-	}(&err, expected, query, args)
 
 	if !expected.queryMatches(query) {
 		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, expected.sqlRegex.String())
 	}
 
-	if !expected.argsMatches(args) {
-		return nil, fmt.Errorf("query '%s', args %+v does not match expected %+v", query, args, expected.args)
+	if err := expected.argsMatches(args); err != nil {
+		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
 	if expected.err != nil {

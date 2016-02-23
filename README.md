@@ -188,6 +188,11 @@ It only asserts that argument is of `time.Time` type.
 
 ## Changes
 
+- **2016-02-23** - added **sqlmock.AnyArg()** function to provide any kind
+  of argument matcher.
+- **2016-02-23** - convert expected arguments to driver.Value as natural
+  driver does, the change may affect time.Time comparison and will be
+  stricter. See [issue](https://github.com/DATA-DOG/go-sqlmock/issues/31).
 - **2015-08-27** - **v1** api change, concurrency support, all known issues fixed.
 - **2014-08-16** instead of **panic** during reflect type mismatch when comparing query arguments - now return error
 - **2014-08-14** added **sqlmock.NewErrorResult** which gives an option to return driver.Result with errors for

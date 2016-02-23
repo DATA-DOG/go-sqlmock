@@ -17,46 +17,45 @@ func (m matcher) Match(driver.Value) bool {
 
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{}
-	against := []driver.Value{5}
-	if !e.argsMatches(against) {
-		t.Error("arguments should match, since the no expectation was set")
+	against := []driver.Value{int64(5)}
+	if err := e.argsMatches(against); err != nil {
+		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
 	}
 
 	e.args = []driver.Value{5, "str"}
 
-	against = []driver.Value{5}
-	if e.argsMatches(against) {
+	against = []driver.Value{int64(5)}
+	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since the size is not the same")
 	}
 
-	against = []driver.Value{3, "str"}
-	if e.argsMatches(against) {
+	against = []driver.Value{int64(3), "str"}
+	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since the first argument (int value) is different")
 	}
 
-	against = []driver.Value{5, "st"}
-	if e.argsMatches(against) {
+	against = []driver.Value{int64(5), "st"}
+	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since the second argument (string value) is different")
 	}
 
-	against = []driver.Value{5, "str"}
-	if !e.argsMatches(against) {
-		t.Error("arguments should match, but it did not")
+	against = []driver.Value{int64(5), "str"}
+	if err := e.argsMatches(against); err != nil {
+		t.Errorf("arguments should match, but it did not: %s", err)
 	}
-
-	e.args = []driver.Value{5, time.Now()}
 
 	const longForm = "Jan 2, 2006 at 3:04pm (MST)"
 	tm, _ := time.Parse(longForm, "Feb 3, 2013 at 7:54pm (PST)")
+	e.args = []driver.Value{5, tm}
 
-	against = []driver.Value{5, tm}
-	if !e.argsMatches(against) {
-		t.Error("arguments should match (time will be compared only by type), but it did not")
+	against = []driver.Value{int64(5), tm}
+	if err := e.argsMatches(against); err != nil {
+		t.Error("arguments should match, but it did not")
 	}
 
-	against = []driver.Value{5, matcher{}}
-	if !e.argsMatches(against) {
-		t.Error("arguments should match, but it did not")
+	e.args = []driver.Value{5, matcher{}}
+	if err := e.argsMatches(against); err != nil {
+		t.Errorf("arguments should match, but it did not: %s", err)
 	}
 }
 
@@ -65,25 +64,25 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 
 	e = &queryBasedExpectation{args: []driver.Value{true}}
 	against := []driver.Value{true}
-	if !e.argsMatches(against) {
+	if err := e.argsMatches(against); err != nil {
 		t.Error("arguments should match, since arguments are the same")
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{false}}
 	against = []driver.Value{false}
-	if !e.argsMatches(against) {
+	if err := e.argsMatches(against); err != nil {
 		t.Error("arguments should match, since argument are the same")
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{true}}
 	against = []driver.Value{false}
-	if e.argsMatches(against) {
+	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since argument is different")
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{false}}
 	against = []driver.Value{true}
-	if e.argsMatches(against) {
+	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since argument is different")
 	}
 }

@@ -3,6 +3,7 @@ package sqlmock
 import (
 	"database/sql/driver"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -349,7 +350,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.Value) error {
 			return fmt.Errorf("argument %d: non-subset type %T returned from Value", k, darg)
 		}
 
-		if darg != args[k] {
+		if !reflect.DeepEqual(darg, args[k]) {
 			return fmt.Errorf("argument %d expected [%T - %+v] does not match actual [%T - %+v]", k, darg, darg, args[k], args[k])
 		}
 	}

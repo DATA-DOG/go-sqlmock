@@ -35,3 +35,24 @@ func TestAnyTimeArgument(t *testing.T) {
 		t.Errorf("there were unfulfilled expections: %s", err)
 	}
 }
+
+func TestByteSliceArgument(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	username := []byte("user")
+	mock.ExpectExec("INSERT INTO users").WithArgs(username).WillReturnResult(NewResult(1, 1))
+
+	_, err = db.Exec("INSERT INTO users(username) VALUES (?)", username)
+	if err != nil {
+		t.Errorf("error '%s' was not expected, while inserting a row", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}

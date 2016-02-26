@@ -231,7 +231,6 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 	}
 
 	defer expected.Unlock()
-	expected.triggered = true
 
 	if !expected.queryMatches(query) {
 		return nil, fmt.Errorf("exec query '%s', does not match regex '%s'", query, expected.sqlRegex.String())
@@ -248,6 +247,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 	if expected.result == nil {
 		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
+	expected.triggered = true
 	return expected.result, err
 }
 

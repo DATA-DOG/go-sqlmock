@@ -10,7 +10,7 @@ import (
 func TestExpectedPreparedStatemtCloseError(t *testing.T) {
 	conn, mock, err := New()
 	if err != nil {
-		t.Fatalf("failed to open sqlmock database:", err)
+		t.Fatal("failed to open sqlmock database:", err)
 	}
 
 	mock.ExpectBegin()
@@ -19,12 +19,12 @@ func TestExpectedPreparedStatemtCloseError(t *testing.T) {
 
 	txn, err := conn.Begin()
 	if err != nil {
-		t.Fatalf("unexpected error while opening transaction:", err)
+		t.Fatal("unexpected error while opening transaction:", err)
 	}
 
 	stmt, err := txn.Prepare("SELECT")
 	if err != nil {
-		t.Fatalf("unexpected error while preparing a statement:", err)
+		t.Fatal("unexpected error while preparing a statement:", err)
 	}
 
 	if err := stmt.Close(); err != want {

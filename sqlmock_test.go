@@ -679,14 +679,42 @@ func TestRunExecsWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 // see #37 issue
 func TestRunQueriesWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 	db, dbmock, _ := New()
-	dbmock.ExpectQuery("THE FIRST EXEC")
-	dbmock.ExpectQuery("THE SECOND EXEC")
+	dbmock.ExpectQuery("THE FIRST QUERY")
+	dbmock.ExpectQuery("THE SECOND QUERY")
 
-	_, _ = db.Query("THE FIRST EXEC")
-	_, _ = db.Query("THE WRONG EXEC")
+	_, _ = db.Query("THE FIRST QUERY")
+	_, _ = db.Query("THE WRONG QUERY")
 
 	err := dbmock.ExpectationsWereMet()
 	if err == nil {
 		t.Fatal("was expecting an error, but there wasn't any")
+	}
+}
+
+func TestRunExecsWithExpectedErrorMeetsExpectations(t *testing.T) {
+	db, dbmock, _ := New()
+	dbmock.ExpectExec("THE FIRST EXEC").WillReturnError(fmt.Errorf("big bad bug"))
+	dbmock.ExpectExec("THE SECOND EXEC").WillReturnResult(NewResult(0, 0))
+
+	_, _ = db.Exec("THE FIRST EXEC")
+	_, _ = db.Exec("THE SECOND EXEC")
+
+	err := dbmock.ExpectationsWereMet()
+	if err != nil {
+		t.Fatalf("all expectations should be met: %s", err)
+	}
+}
+
+func TestRunQueryWithExpectedErrorMeetsExpectations(t *testing.T) {
+	db, dbmock, _ := New()
+	dbmock.ExpectQuery("THE FIRST QUERY").WillReturnError(fmt.Errorf("big bad bug"))
+	dbmock.ExpectQuery("THE SECOND QUERY").WillReturnRows(NewRows([]string{"col"}).AddRow(1))
+
+	_, _ = db.Query("THE FIRST QUERY")
+	_, _ = db.Query("THE SECOND QUERY")
+
+	err := dbmock.ExpectationsWereMet()
+	if err != nil {
+		t.Fatalf("all expectations should be met: %s", err)
 	}
 }

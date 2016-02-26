@@ -658,3 +658,35 @@ func ExampleSqlmock_goroutines() {
 	}
 	// Output:
 }
+
+// False Positive - passes despite mismatched Exec
+// see #37 issue
+func TestRunExecsWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
+	db, dbmock, _ := New()
+	dbmock.ExpectExec("THE FIRST EXEC")
+	dbmock.ExpectExec("THE SECOND EXEC")
+
+	_, _ = db.Exec("THE FIRST EXEC")
+	_, _ = db.Exec("THE WRONG EXEC")
+
+	err := dbmock.ExpectationsWereMet()
+	if err == nil {
+		t.Fatal("was expecting an error, but there wasn't any")
+	}
+}
+
+// False Positive - passes despite mismatched Exec
+// see #37 issue
+func TestRunQueriesWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
+	db, dbmock, _ := New()
+	dbmock.ExpectQuery("THE FIRST EXEC")
+	dbmock.ExpectQuery("THE SECOND EXEC")
+
+	_, _ = db.Query("THE FIRST EXEC")
+	_, _ = db.Query("THE WRONG EXEC")
+
+	err := dbmock.ExpectationsWereMet()
+	if err == nil {
+		t.Fatal("was expecting an error, but there wasn't any")
+	}
+}

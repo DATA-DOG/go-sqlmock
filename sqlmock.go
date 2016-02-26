@@ -240,6 +240,8 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
+	expected.triggered = true
+
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error
 	}
@@ -247,7 +249,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 	if expected.result == nil {
 		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
-	expected.triggered = true
+
 	return expected.result, err
 }
 
@@ -349,6 +351,8 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
+	expected.triggered = true
+
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error
 	}
@@ -357,7 +361,6 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
 
-	expected.triggered = true
 	return expected.rows, err
 }
 

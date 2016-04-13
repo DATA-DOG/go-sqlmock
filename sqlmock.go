@@ -279,7 +279,7 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 
 		next.Unlock()
 		if c.ordered {
-			return nil, fmt.Errorf("call to Prepare stetement with query '%s', was not expected, next expectation is: %s", query, next)
+			return nil, fmt.Errorf("call to Prepare statement with query '%s', was not expected, next expectation is: %s", query, next)
 		}
 	}
 

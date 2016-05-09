@@ -5,17 +5,20 @@ import (
 	"encoding/csv"
 	"io"
 	"strings"
+	"time"
 )
 
 // CSVColumnParser is a function which converts trimmed csv
 // column string to a []byte representation. currently
 // transforms NULL to nil
-var CSVColumnParser = func(s string) []byte {
-	switch {
-	case strings.ToLower(s) == "null":
+var CSVColumnParser = func(s string) driver.Value {
+	if strings.ToLower(s) == "null" {
 		return nil
+	} else if p, err := time.Parse("2006-01-02T15:04:05", s); err == nil {
+		return p
+	} else {
+		return []byte(s)
 	}
-	return []byte(s)
 }
 
 // Rows interface allows to construct rows

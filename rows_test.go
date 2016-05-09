@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func ExampleRows() {
@@ -218,7 +219,8 @@ func TestRowsScanError(t *testing.T) {
 
 func TestCSVRowParser(t *testing.T) {
 	t.Parallel()
-	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
+	rs := NewRows([]string{"col1", "col2", "col3"}).FromCSVString(
+		"a,NULL,2016-05-09T14:59:03")
 	db, mock, err := New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -234,9 +236,10 @@ func TestCSVRowParser(t *testing.T) {
 	defer rw.Close()
 	var col1 string
 	var col2 []byte
+	var col3 time.Time
 
 	rw.Next()
-	if err = rw.Scan(&col1, &col2); err != nil {
+	if err = rw.Scan(&col1, &col2, &col3); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	if col1 != "a" {
@@ -244,5 +247,8 @@ func TestCSVRowParser(t *testing.T) {
 	}
 	if col2 != nil {
 		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
+	}
+	if col3 != time.Date(2016, time.May, 9, 14, 59, 3, 0, time.UTC) {
+		t.Fatalf("expected col3 to be 2016-05-09T14:59:03, but got [%T]:%+v", col3, col3)
 	}
 }

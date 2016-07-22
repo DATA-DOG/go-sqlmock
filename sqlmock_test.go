@@ -718,3 +718,38 @@ func TestRunQueryWithExpectedErrorMeetsExpectations(t *testing.T) {
 		t.Fatalf("all expectations should be met: %s", err)
 	}
 }
+
+func TestEmptyRowSet(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"})
+
+	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	rows, err := db.Query("SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Error("Unexpected error while trying to close rows")
+		}
+	}()
+
+	if rows.Next() {
+		t.Error("expected no rows but got one")
+	}
+
+	err = mock.ExpectationsWereMet()
+	if err != nil {
+		t.Fatalf("all expectations should be met: %s", err)
+	}
+}

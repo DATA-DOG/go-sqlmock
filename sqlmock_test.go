@@ -753,3 +753,23 @@ func TestEmptyRowSet(t *testing.T) {
 		t.Fatalf("all expectations should be met: %s", err)
 	}
 }
+
+// Based on issue #50
+func TestPrepareExpectationNotFulfilled(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPrepare("^BADSELECT$")
+
+	if _, err := db.Prepare("SELECT"); err == nil {
+		t.Fatal("prepare should not match expected query string")
+	}
+
+	if err := mock.ExpectationsWereMet(); err == nil {
+		t.Errorf("was expecting an error, since prepared statement query does not match, but there was none")
+	}
+}

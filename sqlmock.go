@@ -291,9 +291,12 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 		}
 		return nil, fmt.Errorf(msg, query)
 	}
+	defer expected.Unlock()
+	if !expected.sqlRegex.MatchString(query) {
+		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, expected.sqlRegex.String())
+	}
 
 	expected.triggered = true
-	expected.Unlock()
 	return &statement{c, query, expected.closeErr}, expected.err
 }
 

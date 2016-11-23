@@ -11,7 +11,10 @@ import (
 func cancelOrder(db *sql.DB, orderID int) error {
 	tx, _ := db.Begin()
 	_, _ = tx.Query("SELECT * FROM orders {0} FOR UPDATE", orderID)
-	_ = tx.Rollback()
+	err := tx.Rollback()
+	if (err != nil) {
+		return err
+	}
 	return nil
 }
 
@@ -214,7 +217,7 @@ func TestTransactionExpectations(t *testing.T) {
 
 	err = tx.Commit()
 	if err != nil {
-		t.Errorf("an error '%s' was not expected when commiting a transaction", err)
+		t.Errorf("an error '%s' was not expected when committing a transaction", err)
 	}
 
 	// begin and rollback
@@ -394,7 +397,7 @@ func TestWrongExpectations(t *testing.T) {
 		WithArgs(5).
 		WillReturnRows(rs1)
 
-	mock.ExpectCommit().WillReturnError(fmt.Errorf("deadlock occured"))
+	mock.ExpectCommit().WillReturnError(fmt.Errorf("deadlock occurred"))
 	mock.ExpectRollback() // won't be triggered
 
 	var id int
@@ -418,7 +421,7 @@ func TestWrongExpectations(t *testing.T) {
 
 	err = tx.Commit()
 	if err == nil {
-		t.Error("a deadlock error was expected when commiting a transaction", err)
+		t.Error("a deadlock error was expected when committing a transaction", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err == nil {
@@ -772,4 +775,37 @@ func TestPrepareExpectationNotFulfilled(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err == nil {
 		t.Errorf("was expecting an error, since prepared statement query does not match, but there was none")
 	}
+}
+
+func TestRollbackThrow(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	// columns to be used for result
+	columns := []string{"id", "status"}
+	// expect transaction begin
+	mock.ExpectBegin()
+	// expect query to fetch order, match it with regexp
+	mock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE").
+		WithArgs(1).
+		WillReturnRows(NewRows(columns).AddRow(1, 1))
+	// expect transaction rollback, since order status is "cancelled"
+	mock.ExpectRollback().WillReturnError(fmt.Errorf("rollback failed"))
+
+	// run the cancel order function
+	someOrderID := 1
+	// call a function which executes expected database operations
+	err = cancelOrder(db, someOrderID)
+	if err == nil {
+		t.Error("an error was expected when rolling back transaction, but got none")
+	}
+
+	// ensure all expectations have been met
+	if err = mock.ExpectationsWereMet(); err != nil {
+		fmt.Printf("unmet expectation error: %s", err)
+	}
+	// Output:
 }

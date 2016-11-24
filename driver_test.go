@@ -75,6 +75,9 @@ func TestTwoOpenConnectionsOnTheSameDSN(t *testing.T) {
 		t.Errorf("expected no error, but got: %s", err)
 	}
 	db2, mock2, err := New()
+	if err != nil {
+		t.Errorf("expected no error, but got: %s", err)
+	}
 	if len(pool.conns) != 2 {
 		t.Errorf("expected 2 connection in pool, but there is: %d", len(pool.conns))
 	}
@@ -84,5 +87,26 @@ func TestTwoOpenConnectionsOnTheSameDSN(t *testing.T) {
 	}
 	if mock == mock2 {
 		t.Errorf("expected not the same mock instance, but it is the same")
+	}
+}
+
+func TestWrongDSN(t *testing.T) {
+	t.Parallel()
+	db, _, _ := New()
+	defer db.Close()
+	if _, err := db.Driver().Open("wrong_dsn"); err == nil {
+		t.Error("expected error on Open")
+	}
+}
+
+func TestNewDSN(t *testing.T) {
+	if _, _, err := NewWithDSN("sqlmock_db_99"); err != nil {
+		t.Errorf("expected no error on NewWithDSN, but got: %s", err)
+	}
+}
+
+func TestDuplicateNewDSN(t *testing.T) {
+	if _, _, err := NewWithDSN("sqlmock_db_1"); err == nil {
+		t.Error("expected error on NewWithDSN")
 	}
 }

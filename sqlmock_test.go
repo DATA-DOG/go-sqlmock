@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"github.com/golang/go/src/pkg/strconv"
 )
 
 func cancelOrder(db *sql.DB, orderID int) error {
@@ -861,9 +862,80 @@ func TestUnexpectedRollbackOrder(t *testing.T) {
 		return
 	}
 	mock.ExpectBegin()
-	mock.ExpectCommit()
+
 	tx, _ := db.Begin()
 	if err := tx.Rollback(); err == nil {
 		t.Error("an error was expected when calling rollback, but got none")
+	}
+}
+
+func TestPrepareExec(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	defer db.Close()
+	mock.ExpectBegin()
+	ep := mock.ExpectPrepare("INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)")
+	for i:=0; i < 3; i++ {
+		ep.ExpectExec().WillReturnResult(NewResult(1,1))
+	}
+	mock.ExpectCommit()
+	tx, _ := db.Begin()
+	stmt, err := tx.Prepare("INSERT INTO ORDERS(ID, STATUS) VALUES (?, ?)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	for i:=0; i < 3; i++ {
+		_, err := stmt.Exec(i, "Hello" + strconv.Itoa(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	tx.Commit()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
+func TestPrepareQuery(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	defer db.Close()
+	mock.ExpectBegin()
+	ep := mock.ExpectPrepare("SELECT ID, STATUS FROM ORDERS WHERE ID = \\?")
+	ep.ExpectQuery().WithArgs(101).WillReturnRows(NewRows([]string{"ID", "STATUS"}).AddRow(101, "Hello"))
+	mock.ExpectCommit()
+	tx, _ := db.Begin()
+	stmt, err := tx.Prepare("SELECT ID, STATUS FROM ORDERS WHERE ID = ?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var(
+			id int
+			status string
+		)
+		if rows.Scan(&id, &status); id != 101 || status != "Hello" {
+			t.Fatal("wrong query results")
+		}
+
+	}
+	tx.Commit()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
 	}
 }

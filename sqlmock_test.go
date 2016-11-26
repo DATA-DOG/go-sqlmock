@@ -809,3 +809,61 @@ func TestRollbackThrow(t *testing.T) {
 	}
 	// Output:
 }
+
+func TestUnexpectedCommit(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	tx, _ := db.Begin()
+	if err := tx.Commit(); err == nil {
+		t.Error("an error was expected when calling commit, but got none")
+	}
+}
+
+func TestUnexpectedCommitOrder(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	mock.ExpectRollback()
+	tx, _ := db.Begin()
+	if err := tx.Commit(); err == nil {
+		t.Error("an error was expected when calling commit, but got none")
+	}
+}
+
+func TestUnexpectedRollback(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	tx, _ := db.Begin()
+	if err := tx.Rollback(); err == nil {
+		t.Error("an error was expected when calling rollback, but got none")
+	}
+}
+
+func TestUnexpectedRollbackOrder(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	mock.ExpectCommit()
+	tx, _ := db.Begin()
+	if err := tx.Rollback(); err == nil {
+		t.Error("an error was expected when calling rollback, but got none")
+	}
+}

@@ -806,7 +806,7 @@ func TestRollbackThrow(t *testing.T) {
 
 	// ensure all expectations have been met
 	if err = mock.ExpectationsWereMet(); err != nil {
-		fmt.Printf("unmet expectation error: %s", err)
+		t.Errorf("unmet expectation error: %s", err)
 	}
 	// Output:
 }
@@ -833,10 +833,23 @@ func TestUnexpectedCommitOrder(t *testing.T) {
 		return
 	}
 	mock.ExpectBegin()
-	mock.ExpectRollback()
+	mock.ExpectRollback().WillReturnError(fmt.Errorf("Rollback failed"))
 	tx, _ := db.Begin()
 	if err := tx.Commit(); err == nil {
 		t.Error("an error was expected when calling commit, but got none")
+	}
+}
+
+func TestExpectedCommitOrder(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectCommit().WillReturnError(fmt.Errorf("Commit failed"))
+	if _, err := db.Begin(); err == nil {
+		t.Error("an error was expected when calling begin, but got none")
 	}
 }
 
@@ -937,5 +950,49 @@ func TestPrepareQuery(t *testing.T) {
 	tx.Commit()
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
+func TestExpectedCloseError(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectClose().WillReturnError(fmt.Errorf("Close failed"))
+	if err := db.Close(); err == nil {
+		t.Error("an error was expected when calling close, but got none")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
+func TestExpectedCloseOrder(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	defer db.Close()
+	mock.ExpectClose().WillReturnError(fmt.Errorf("Close failed"))
+	db.Begin()
+	if err := mock.ExpectationsWereMet(); err == nil {
+		t.Error("expected error on ExpectationsWereMet")
+	}
+}
+
+func TestExpectedBeginOrder(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin().WillReturnError(fmt.Errorf("Begin failed"))
+	if err := db.Close(); err == nil {
+		t.Error("an error was expected when calling close, but got none")
 	}
 }

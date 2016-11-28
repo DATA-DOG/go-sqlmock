@@ -246,3 +246,20 @@ func TestCSVRowParser(t *testing.T) {
 		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
 	}
 }
+
+func TestWrongNumberOfValues(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	defer db.Close()
+	defer func() {
+		recover()
+	}()
+	mock.ExpectQuery("SELECT ID FROM TABLE").WithArgs(101).WillReturnRows(NewRows([]string{"ID"}).AddRow(101, "Hello"))
+	db.Query("SELECT ID FROM TABLE", 101)
+	// shouldn't reach here
+	t.Error("expected panic from query")
+}

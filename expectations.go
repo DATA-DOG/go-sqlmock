@@ -12,9 +12,11 @@ import (
 // an expectation interface
 type expectation interface {
 	fulfilled() bool
+	check() bool
 	Lock()
 	Unlock()
 	String() string
+	Optional()
 }
 
 // common expectation struct
@@ -23,10 +25,19 @@ type commonExpectation struct {
 	sync.Mutex
 	triggered bool
 	err       error
+	optional bool
 }
 
 func (e *commonExpectation) fulfilled() bool {
 	return e.triggered
+}
+
+func (e *commonExpectation) check() bool {
+	return e.triggered || e.optional
+}
+
+func (e *commonExpectation) Optional() {
+	e.optional = true
 }
 
 // ExpectedClose is used to manage *sql.DB.Close expectation

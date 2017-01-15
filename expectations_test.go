@@ -103,3 +103,27 @@ func ExampleExpectedExec() {
 	fmt.Println(err)
 	// Output: some error
 }
+
+func TestBuildQuery(t *testing.T){
+	db, mock, _ := New()
+	query := `
+		SELECT
+			name,
+			email,
+			address,
+			anotherfield
+		FROM user
+	`
+	
+	mock.ExpectQuery(query)
+	mock.ExpectExec(query)
+	mock.ExpectPrepare(query)
+	
+	db.QueryRow(query)
+	db.Exec(query)
+	db.Prepare(query)
+	
+	if err:=mock.ExpectationsWereMet(); err!=nil{
+		t.Error(err)
+	}
+}

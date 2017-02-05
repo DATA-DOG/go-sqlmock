@@ -3,17 +3,17 @@ package sqlmock
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
-	"github.com/golang/go/src/pkg/strconv"
 )
 
 func cancelOrder(db *sql.DB, orderID int) error {
 	tx, _ := db.Begin()
 	_, _ = tx.Query("SELECT * FROM orders {0} FOR UPDATE", orderID)
 	err := tx.Rollback()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -892,8 +892,8 @@ func TestPrepareExec(t *testing.T) {
 	defer db.Close()
 	mock.ExpectBegin()
 	ep := mock.ExpectPrepare("INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)")
-	for i:=0; i < 3; i++ {
-		ep.ExpectExec().WillReturnResult(NewResult(1,1))
+	for i := 0; i < 3; i++ {
+		ep.ExpectExec().WillReturnResult(NewResult(1, 1))
 	}
 	mock.ExpectCommit()
 	tx, _ := db.Begin()
@@ -902,8 +902,8 @@ func TestPrepareExec(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
-	for i:=0; i < 3; i++ {
-		_, err := stmt.Exec(i, "Hello" + strconv.Itoa(i))
+	for i := 0; i < 3; i++ {
+		_, err := stmt.Exec(i, "Hello"+strconv.Itoa(i))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -938,8 +938,8 @@ func TestPrepareQuery(t *testing.T) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var(
-			id int
+		var (
+			id     int
 			status string
 		)
 		if rows.Scan(&id, &status); id != 101 || status != "Hello" {

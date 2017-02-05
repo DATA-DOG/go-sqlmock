@@ -104,7 +104,7 @@ func ExampleExpectedExec() {
 	// Output: some error
 }
 
-func TestBuildQuery(t *testing.T){
+func TestBuildQuery(t *testing.T) {
 	db, mock, _ := New()
 	query := `
 		SELECT
@@ -113,17 +113,22 @@ func TestBuildQuery(t *testing.T){
 			address,
 			anotherfield
 		FROM user
+		where
+			name    = 'John'
+			and
+			address = 'Jakarta'
+		
 	`
-	
+
 	mock.ExpectQuery(query)
 	mock.ExpectExec(query)
 	mock.ExpectPrepare(query)
-	
+
 	db.QueryRow(query)
 	db.Exec(query)
 	db.Prepare(query)
-	
-	if err:=mock.ExpectationsWereMet(); err!=nil{
+
+	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Error(err)
 	}
 }

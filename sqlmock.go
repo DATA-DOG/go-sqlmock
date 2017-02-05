@@ -255,7 +255,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 
 func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 	e := &ExpectedExec{}
-	sqlRegexStr = buildQuery(sqlRegexStr)
+	sqlRegexStr = stripQuery(sqlRegexStr)
 	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
 	c.expected = append(c.expected, e)
 	return e
@@ -302,7 +302,7 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
-	sqlRegexStr = buildQuery(sqlRegexStr)
+	sqlRegexStr = stripQuery(sqlRegexStr)
 	e := &ExpectedPrepare{sqlRegex: regexp.MustCompile(sqlRegexStr), mock: c}
 	c.expected = append(c.expected, e)
 	return e
@@ -371,7 +371,7 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 
 func (c *sqlmock) ExpectQuery(sqlRegexStr string) *ExpectedQuery {
 	e := &ExpectedQuery{}
-	sqlRegexStr = buildQuery(sqlRegexStr)
+	sqlRegexStr = stripQuery(sqlRegexStr)
 	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
 	c.expected = append(c.expected, e)
 	return e

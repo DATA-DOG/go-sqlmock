@@ -15,6 +15,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"regexp"
+	"time"
 )
 
 // Sqlmock interface serves to create expectations
@@ -184,6 +185,7 @@ func (c *sqlmock) Begin() (driver.Tx, error) {
 
 	expected.triggered = true
 	expected.Unlock()
+	defer time.Sleep(expected.delay)
 	return c, expected.err
 }
 
@@ -194,7 +196,18 @@ func (c *sqlmock) ExpectBegin() *ExpectedBegin {
 }
 
 // Exec meets http://golang.org/pkg/database/sql/driver/#Execer
-func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, err error) {
+func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error) {
+	namedArgs := make([]namedValue, len(args))
+	for i, v := range args {
+		namedArgs[i] = namedValue{
+			Ordinal: i + 1,
+			Value:   v,
+		}
+	}
+	return c.exec(nil, query, namedArgs)
+}
+
+func (c *sqlmock) exec(ctx interface{}, query string, args []namedValue) (res driver.Result, err error) {
 	query = stripQuery(query)
 	var expected *ExpectedExec
 	var fulfilled int
@@ -230,17 +243,19 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 		return nil, fmt.Errorf(msg, query, args)
 	}
 
-	defer expected.Unlock()
-
 	if !expected.queryMatches(query) {
+		expected.Unlock()
 		return nil, fmt.Errorf("exec query '%s', does not match regex '%s'", query, expected.sqlRegex.String())
 	}
 
 	if err := expected.argsMatches(args); err != nil {
+		expected.Unlock()
 		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
 	expected.triggered = true
+	defer time.Sleep(expected.delay)
+	defer expected.Unlock()
 
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error
@@ -292,12 +307,14 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 		}
 		return nil, fmt.Errorf(msg, query)
 	}
-	defer expected.Unlock()
 	if !expected.sqlRegex.MatchString(query) {
+		expected.Unlock()
 		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, expected.sqlRegex.String())
 	}
 
 	expected.triggered = true
+	defer time.Sleep(expected.delay)
+	defer expected.Unlock()
 	return &statement{c, query, expected.closeErr}, expected.err
 }
 
@@ -308,8 +325,27 @@ func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
 	return e
 }
 
+type namedValue struct {
+	Name    string
+	Ordinal int
+	Value   driver.Value
+}
+
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer
 func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err error) {
+	namedArgs := make([]namedValue, len(args))
+	for i, v := range args {
+		namedArgs[i] = namedValue{
+			Ordinal: i + 1,
+			Value:   v,
+		}
+	}
+	return c.query(nil, query, namedArgs)
+}
+
+// in order to prevent dependencies, we use Context as a plain interface
+// since it is only related to internal implementation
+func (c *sqlmock) query(ctx interface{}, query string, args []namedValue) (rw driver.Rows, err error) {
 	query = stripQuery(query)
 	var expected *ExpectedQuery
 	var fulfilled int
@@ -346,17 +382,20 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 		return nil, fmt.Errorf(msg, query, args)
 	}
 
-	defer expected.Unlock()
-
 	if !expected.queryMatches(query) {
+		expected.Unlock()
 		return nil, fmt.Errorf("query '%s', does not match regex [%s]", query, expected.sqlRegex.String())
 	}
 
 	if err := expected.argsMatches(args); err != nil {
+		expected.Unlock()
 		return nil, fmt.Errorf("exec query '%s', arguments do not match: %s", query, err)
 	}
 
 	expected.triggered = true
+
+	defer time.Sleep(expected.delay)
+	defer expected.Unlock()
 
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error

@@ -5,10 +5,11 @@ package sqlmock
 import (
 	"context"
 	"database/sql/driver"
-	"fmt"
+	"errors"
+	"time"
 )
 
-var CancelledStatementErr = fmt.Errorf("canceling query due to user request")
+var ErrCancelled = errors.New("canceling query due to user request")
 
 // Implement the "QueryerContext" interface
 func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
@@ -17,31 +18,16 @@ func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.
 		namedArgs[i] = namedValue(nv)
 	}
 
-	ex, err := c.queryExpectation(query, namedArgs)
+	ex, err := c.query(query, namedArgs)
 	if err != nil {
 		return nil, err
 	}
 
-	type result struct {
-		rows driver.Rows
-		err  error
-	}
-
-	exec := make(chan result)
-	defer func() {
-		close(exec)
-	}()
-
-	go func() {
-		rows, err := c.query(ex)
-		exec <- result{rows, err}
-	}()
-
 	select {
-	case res := <-exec:
-		return res.rows, res.err
+	case <-time.After(ex.delay):
+		return ex.rows, nil
 	case <-ctx.Done():
-		return nil, CancelledStatementErr
+		return nil, ErrCancelled
 	}
 }
 
@@ -52,91 +38,46 @@ func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.N
 		namedArgs[i] = namedValue(nv)
 	}
 
-	ex, err := c.execExpectation(query, namedArgs)
+	ex, err := c.exec(query, namedArgs)
 	if err != nil {
 		return nil, err
 	}
 
-	type result struct {
-		rs  driver.Result
-		err error
-	}
-
-	exec := make(chan result)
-	defer func() {
-		close(exec)
-	}()
-
-	go func() {
-		rs, err := c.exec(ex)
-		exec <- result{rs, err}
-	}()
-
 	select {
-	case res := <-exec:
-		return res.rs, res.err
+	case <-time.After(ex.delay):
+		return ex.result, nil
 	case <-ctx.Done():
-		return nil, CancelledStatementErr
+		return nil, ErrCancelled
 	}
 }
 
 // Implement the "ConnBeginTx" interface
 func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
-	ex, err := c.beginExpectation()
+	ex, err := c.begin()
 	if err != nil {
 		return nil, err
 	}
 
-	type result struct {
-		tx  driver.Tx
-		err error
-	}
-
-	exec := make(chan result)
-	defer func() {
-		close(exec)
-	}()
-
-	go func() {
-		tx, err := c.begin(ex)
-		exec <- result{tx, err}
-	}()
-
 	select {
-	case res := <-exec:
-		return res.tx, res.err
+	case <-time.After(ex.delay):
+		return c, nil
 	case <-ctx.Done():
-		return nil, CancelledStatementErr
+		return nil, ErrCancelled
 	}
 }
 
 // Implement the "ConnPrepareContext" interface
 func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	ex, err := c.prepareExpectation(query)
+	ex, err := c.prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
-	type result struct {
-		stmt driver.Stmt
-		err  error
-	}
-
-	exec := make(chan result)
-	defer func() {
-		close(exec)
-	}()
-
-	go func() {
-		stmt, err := c.prepare(ex, query)
-		exec <- result{stmt, err}
-	}()
-
 	select {
-	case res := <-exec:
-		return res.stmt, res.err
+	case <-time.After(ex.delay):
+		return &statement{c, query, ex.closeErr}, nil
 	case <-ctx.Done():
-		return nil, CancelledStatementErr
+		return nil, ErrCancelled
 	}
 }
 

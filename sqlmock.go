@@ -155,20 +155,16 @@ func (c *sqlmock) ExpectationsWereMet() error {
 
 // Begin meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Begin() (driver.Tx, error) {
-	ex, err := c.beginExpectation()
+	ex, err := c.begin()
 	if err != nil {
 		return nil, err
 	}
 
-	return c.begin(ex)
-}
-
-func (c *sqlmock) begin(expected *ExpectedBegin) (driver.Tx, error) {
-	defer time.Sleep(expected.delay)
+	time.Sleep(ex.delay)
 	return c, nil
 }
 
-func (c *sqlmock) beginExpectation() (*ExpectedBegin, error) {
+func (c *sqlmock) begin() (*ExpectedBegin, error) {
 	var expected *ExpectedBegin
 	var ok bool
 	var fulfilled int
@@ -219,15 +215,16 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error)
 		}
 	}
 
-	ex, err := c.execExpectation(query, namedArgs)
+	ex, err := c.exec(query, namedArgs)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.exec(ex)
+	time.Sleep(ex.delay)
+	return ex.result, nil
 }
 
-func (c *sqlmock) execExpectation(query string, args []namedValue) (*ExpectedExec, error) {
+func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	query = stripQuery(query)
 	var expected *ExpectedExec
 	var fulfilled int
@@ -284,11 +281,6 @@ func (c *sqlmock) execExpectation(query string, args []namedValue) (*ExpectedExe
 	return expected, nil
 }
 
-func (c *sqlmock) exec(expected *ExpectedExec) (driver.Result, error) {
-	defer time.Sleep(expected.delay)
-	return expected.result, nil
-}
-
 func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 	e := &ExpectedExec{}
 	sqlRegexStr = stripQuery(sqlRegexStr)
@@ -299,15 +291,16 @@ func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 
 // Prepare meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
-	ex, err := c.prepareExpectation(query)
+	ex, err := c.prepare(query)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.prepare(ex, query)
+	time.Sleep(ex.delay)
+	return &statement{c, query, ex.closeErr}, nil
 }
 
-func (c *sqlmock) prepareExpectation(query string) (*ExpectedPrepare, error) {
+func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	var expected *ExpectedPrepare
 	var fulfilled int
 	var ok bool
@@ -346,11 +339,6 @@ func (c *sqlmock) prepareExpectation(query string) (*ExpectedPrepare, error) {
 	return expected, expected.err
 }
 
-func (c *sqlmock) prepare(expected *ExpectedPrepare, query string) (driver.Stmt, error) {
-	defer time.Sleep(expected.delay)
-	return &statement{c, query, expected.closeErr}, nil
-}
-
 func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
 	sqlRegexStr = stripQuery(sqlRegexStr)
 	e := &ExpectedPrepare{sqlRegex: regexp.MustCompile(sqlRegexStr), mock: c}
@@ -374,15 +362,16 @@ func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) 
 		}
 	}
 
-	ex, err := c.queryExpectation(query, namedArgs)
+	ex, err := c.query(query, namedArgs)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.query(ex)
+	time.Sleep(ex.delay)
+	return ex.rows, nil
 }
 
-func (c *sqlmock) queryExpectation(query string, args []namedValue) (*ExpectedQuery, error) {
+func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error) {
 	query = stripQuery(query)
 	var expected *ExpectedQuery
 	var fulfilled int
@@ -438,12 +427,6 @@ func (c *sqlmock) queryExpectation(query string, args []namedValue) (*ExpectedQu
 		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
 	return expected, nil
-}
-
-func (c *sqlmock) query(expected *ExpectedQuery) (driver.Rows, error) {
-	defer time.Sleep(expected.delay)
-
-	return expected.rows, nil
 }
 
 func (c *sqlmock) ExpectQuery(sqlRegexStr string) *ExpectedQuery {

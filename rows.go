@@ -18,57 +18,22 @@ var CSVColumnParser = func(s string) []byte {
 	return []byte(s)
 }
 
-// Rows interface allows to construct rows
-// which also satisfies database/sql/driver.Rows interface
-type Rows interface {
-	// composed interface, supports sql driver.Rows
-	driver.Rows
-
-	// AddRow composed from database driver.Value slice
-	// return the same instance to perform subsequent actions.
-	// Note that the number of values must match the number
-	// of columns
-	AddRow(columns ...driver.Value) Rows
-
-	// FromCSVString build rows from csv string.
-	// return the same instance to perform subsequent actions.
-	// Note that the number of values must match the number
-	// of columns
-	FromCSVString(s string) Rows
-
-	// RowError allows to set an error
-	// which will be returned when a given
-	// row number is read
-	RowError(row int, err error) Rows
-
-	// CloseError allows to set an error
-	// which will be returned by rows.Close
-	// function.
-	//
-	// The close error will be triggered only in cases
-	// when rows.Next() EOF was not yet reached, that is
-	// a default sql library behavior
-	CloseError(err error) Rows
+type rowSets struct {
+	sets []*Rows
+	pos  int
 }
 
-type rows struct {
-	cols     []string
-	rows     [][]driver.Value
-	pos      int
-	nextErr  map[int]error
-	closeErr error
+func (rs *rowSets) Columns() []string {
+	return rs.sets[rs.pos].cols
 }
 
-func (r *rows) Columns() []string {
-	return r.cols
-}
-
-func (r *rows) Close() error {
-	return r.closeErr
+func (rs *rowSets) Close() error {
+	return rs.sets[rs.pos].closeErr
 }
 
 // advances to next row
-func (r *rows) Next(dest []driver.Value) error {
+func (rs *rowSets) Next(dest []driver.Value) error {
+	r := rs.sets[rs.pos]
 	r.pos++
 	if r.pos > len(r.rows) {
 		return io.EOF // per interface spec
@@ -81,24 +46,48 @@ func (r *rows) Next(dest []driver.Value) error {
 	return r.nextErr[r.pos-1]
 }
 
+// Rows is a mocked collection of rows to
+// return for Query result
+type Rows struct {
+	cols     []string
+	rows     [][]driver.Value
+	pos      int
+	nextErr  map[int]error
+	closeErr error
+}
+
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
-func NewRows(columns []string) Rows {
-	return &rows{cols: columns, nextErr: make(map[int]error)}
+func NewRows(columns []string) *Rows {
+	return &Rows{cols: columns, nextErr: make(map[int]error)}
 }
 
-func (r *rows) CloseError(err error) Rows {
+// CloseError allows to set an error
+// which will be returned by rows.Close
+// function.
+//
+// The close error will be triggered only in cases
+// when rows.Next() EOF was not yet reached, that is
+// a default sql library behavior
+func (r *Rows) CloseError(err error) *Rows {
 	r.closeErr = err
 	return r
 }
 
-func (r *rows) RowError(row int, err error) Rows {
+// RowError allows to set an error
+// which will be returned when a given
+// row number is read
+func (r *Rows) RowError(row int, err error) *Rows {
 	r.nextErr[row] = err
 	return r
 }
 
-func (r *rows) AddRow(values ...driver.Value) Rows {
+// AddRow composed from database driver.Value slice
+// return the same instance to perform subsequent actions.
+// Note that the number of values must match the number
+// of columns
+func (r *Rows) AddRow(values ...driver.Value) *Rows {
 	if len(values) != len(r.cols) {
 		panic("Expected number of values to match number of columns")
 	}
@@ -112,7 +101,11 @@ func (r *rows) AddRow(values ...driver.Value) Rows {
 	return r
 }
 
-func (r *rows) FromCSVString(s string) Rows {
+// FromCSVString build rows from csv string.
+// return the same instance to perform subsequent actions.
+// Note that the number of values must match the number
+// of columns
+func (r *Rows) FromCSVString(s string) *Rows {
 	res := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(res)
 

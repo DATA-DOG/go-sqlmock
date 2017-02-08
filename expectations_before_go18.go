@@ -8,6 +8,13 @@ import (
 	"reflect"
 )
 
+// WillReturnRows specifies the set of resulting rows that will be returned
+// by the triggered query
+func (e *ExpectedQuery) WillReturnRows(rows *Rows) *ExpectedQuery {
+	e.rows = &rowSets{sets: []*Rows{rows}}
+	return e
+}
+
 func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 	if nil == e.args {
 		return nil

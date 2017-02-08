@@ -144,13 +144,6 @@ func (e *ExpectedQuery) WillReturnError(err error) *ExpectedQuery {
 	return e
 }
 
-// WillReturnRows specifies the set of resulting rows that will be returned
-// by the triggered query
-func (e *ExpectedQuery) WillReturnRows(rows driver.Rows) *ExpectedQuery {
-	e.rows = rows
-	return e
-}
-
 // WillDelayFor allows to specify duration for which it will delay
 // result. May be used together with Context
 func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
@@ -175,9 +168,11 @@ func (e *ExpectedQuery) String() string {
 
 	if e.rows != nil {
 		msg += "\n  - should return rows:\n"
-		rs, _ := e.rows.(*rows)
-		for i, row := range rs.rows {
-			msg += fmt.Sprintf("    %d - %+v\n", i, row)
+		rs, _ := e.rows.(*rowSets)
+		for _, set := range rs.sets {
+			for i, row := range set.rows {
+				msg += fmt.Sprintf("    %d - %+v\n", i, row)
+			}
 		}
 		msg = strings.TrimSpace(msg)
 	}

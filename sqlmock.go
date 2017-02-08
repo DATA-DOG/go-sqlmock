@@ -67,6 +67,11 @@ type Sqlmock interface {
 	// By default it is set to - true. But if you use goroutines
 	// to parallelize your query executation, that option may
 	// be handy.
+	//
+	// This option may be turned on anytime during tests. As soon
+	// as it is switched to false, expectations will be matched
+	// in any order. Or otherwise if switched to true, any unmatched
+	// expectations will be expected in order
 	MatchExpectationsInOrder(bool)
 }
 

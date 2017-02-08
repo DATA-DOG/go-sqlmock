@@ -81,4 +81,21 @@ func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt
 	}
 }
 
+// Implement the "Pinger" interface
+// for now we do not have a Ping expectation
+// may be something for the future
+func (c *sqlmock) Ping(ctx context.Context) error {
+	return nil
+}
+
+// Implement the "StmtExecContext" interface
+func (stmt *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	return stmt.conn.ExecContext(ctx, stmt.query, args)
+}
+
+// Implement the "StmtQueryContext" interface
+func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	return stmt.conn.QueryContext(ctx, stmt.query, args)
+}
+
 // @TODO maybe add ExpectedBegin.WithOptions(driver.TxOptions)

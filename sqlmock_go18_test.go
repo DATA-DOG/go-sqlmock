@@ -47,6 +47,50 @@ func TestContextExecCancel(t *testing.T) {
 	}
 }
 
+func TestPreparedStatementContextExecCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPrepare("DELETE FROM users").
+		ExpectExec().
+		WillDelayFor(time.Second).
+		WillReturnResult(NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	stmt, err := db.Prepare("DELETE FROM users")
+	if err != nil {
+		t.Errorf("error was not expected, but got: %v", err)
+	}
+
+	_, err = stmt.ExecContext(ctx)
+	if err == nil {
+		t.Error("error was expected, but there was none")
+	}
+
+	if err != ErrCancelled {
+		t.Errorf("was expecting cancel error, but got: %v", err)
+	}
+
+	_, err = stmt.ExecContext(ctx)
+	if err != context.Canceled {
+		t.Error("error was expected since context was already done, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
 func TestContextExecWithNamedArg(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
@@ -155,6 +199,53 @@ func TestContextQueryCancel(t *testing.T) {
 	}
 
 	_, err = db.QueryContext(ctx, "SELECT id, title FROM articles WHERE id = ?", 5)
+	if err != context.Canceled {
+		t.Error("error was expected since context was already done, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
+func TestPreparedStatementContextQueryCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
+
+	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").
+		ExpectQuery().
+		WithArgs(5).
+		WillDelayFor(time.Second).
+		WillReturnRows(rs)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	stmt, err := db.Prepare("SELECT id, title FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error was not expected, but got: %v", err)
+	}
+
+	_, err = stmt.QueryContext(ctx, 5)
+	if err == nil {
+		t.Error("error was expected, but there was none")
+	}
+
+	if err != ErrCancelled {
+		t.Errorf("was expecting cancel error, but got: %v", err)
+	}
+
+	_, err = stmt.QueryContext(ctx, 5)
 	if err != context.Canceled {
 		t.Error("error was expected since context was already done, but there was none")
 	}

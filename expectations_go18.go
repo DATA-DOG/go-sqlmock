@@ -32,7 +32,6 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 		// custom argument matcher
 		matcher, ok := e.args[k].(Argument)
 		if ok {
-			// @TODO: does it make sense to pass value instead of named value?
 			if !matcher.Match(v.Value) {
 				return fmt.Errorf("matcher %T could not match %d argument %T - %+v", matcher, k, args[k], args[k])
 			}
@@ -45,6 +44,8 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 			if v.Name != named.Name {
 				return fmt.Errorf("named argument %d: name: \"%s\" does not match expected: \"%s\"", k, v.Name, named.Name)
 			}
+		} else if k+1 != v.Ordinal {
+			return fmt.Errorf("argument %d: ordinal position: %d does not match expected: %d", k, k+1, v.Ordinal)
 		}
 
 		// convert to driver converter

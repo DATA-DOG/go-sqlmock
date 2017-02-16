@@ -3,6 +3,7 @@ package sqlmock
 import (
 	"database/sql/driver"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -44,6 +45,24 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	}
 
 	return r.nextErr[r.pos-1]
+}
+
+// transforms to debuggable printable string
+func (rs *rowSets) String() string {
+	msg := "should return rows:\n"
+	if len(rs.sets) == 1 {
+		for n, row := range rs.sets[0].rows {
+			msg += fmt.Sprintf("    row %d - %+v\n", n, row)
+		}
+		return strings.TrimSpace(msg)
+	}
+	for i, set := range rs.sets {
+		msg += fmt.Sprintf("    result set: %d\n", i)
+		for n, row := range set.rows {
+			msg += fmt.Sprintf("      row %d - %+v\n", n, row)
+		}
+	}
+	return strings.TrimSpace(msg)
 }
 
 // Rows is a mocked collection of rows to

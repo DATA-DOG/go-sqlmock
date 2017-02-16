@@ -167,14 +167,7 @@ func (e *ExpectedQuery) String() string {
 	}
 
 	if e.rows != nil {
-		msg += "\n  - should return rows:\n"
-		rs, _ := e.rows.(*rowSets)
-		for _, set := range rs.sets {
-			for i, row := range set.rows {
-				msg += fmt.Sprintf("    %d - %+v\n", i, row)
-			}
-		}
-		msg = strings.TrimSpace(msg)
+		msg += fmt.Sprintf("\n  - %s", e.rows)
 	}
 
 	if e.err != nil {

@@ -10,18 +10,15 @@ maintain correct **TDD** workflow.
 
 - this library is now complete and stable. (you may not find new changes for this reason)
 - supports concurrency and multiple connections.
+- supports **go1.8** Context related feature mocking and Named sql parameters.
 - does not require any modifications to your source code.
 - the driver allows to mock any sql driver method behavior.
 - has strict by default expectation order matching.
-- has no vendor dependencies.
+- has no third party dependencies.
 
 ## Install
 
     go get gopkg.in/DATA-DOG/go-sqlmock.v1
-
-If you need an old version, checkout **go-sqlmock** at gopkg.in:
-
-    go get gopkg.in/DATA-DOG/go-sqlmock.v0
 
 ## Documentation and Examples
 
@@ -187,8 +184,11 @@ It only asserts that argument is of `time.Time` type.
 
     go test -race
 
-## Changes
+## Change Log
 
+- **2017-02-09** - implemented support for **go1.8** features. **Rows** interface was changed to struct
+  but contains all methods as before and should maintain backwards compatibility. **ExpectedQuery.WillReturnRows** may now
+  accept multiple row sets.
 - **2016-11-02** - `db.Prepare()` was not validating expected prepare SQL
   query. It should still be validated even if Exec or Query is not
   executed on that prepared statement.

@@ -15,6 +15,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"regexp"
+	"time"
 )
 
 // Sqlmock interface serves to create expectations
@@ -66,6 +67,11 @@ type Sqlmock interface {
 	// By default it is set to - true. But if you use goroutines
 	// to parallelize your query executation, that option may
 	// be handy.
+	//
+	// This option may be turned on anytime during tests. As soon
+	// as it is switched to false, expectations will be matched
+	// in any order. Or otherwise if switched to true, any unmatched
+	// expectations will be expected in order
 	MatchExpectationsInOrder(bool)
 }
 
@@ -154,6 +160,16 @@ func (c *sqlmock) ExpectationsWereMet() error {
 
 // Begin meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Begin() (driver.Tx, error) {
+	ex, err := c.begin()
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(ex.delay)
+	return c, nil
+}
+
+func (c *sqlmock) begin() (*ExpectedBegin, error) {
 	var expected *ExpectedBegin
 	var ok bool
 	var fulfilled int
@@ -184,7 +200,8 @@ func (c *sqlmock) Begin() (driver.Tx, error) {
 
 	expected.triggered = true
 	expected.Unlock()
-	return c, expected.err
+
+	return expected, expected.err
 }
 
 func (c *sqlmock) ExpectBegin() *ExpectedBegin {
@@ -194,7 +211,25 @@ func (c *sqlmock) ExpectBegin() *ExpectedBegin {
 }
 
 // Exec meets http://golang.org/pkg/database/sql/driver/#Execer
-func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, err error) {
+func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error) {
+	namedArgs := make([]namedValue, len(args))
+	for i, v := range args {
+		namedArgs[i] = namedValue{
+			Ordinal: i + 1,
+			Value:   v,
+		}
+	}
+
+	ex, err := c.exec(query, namedArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(ex.delay)
+	return ex.result, nil
+}
+
+func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	query = stripQuery(query)
 	var expected *ExpectedExec
 	var fulfilled int
@@ -229,7 +264,6 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 		}
 		return nil, fmt.Errorf(msg, query, args)
 	}
-
 	defer expected.Unlock()
 
 	if !expected.queryMatches(query) {
@@ -241,7 +275,6 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 	}
 
 	expected.triggered = true
-
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error
 	}
@@ -250,7 +283,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (res driver.Result, er
 		return nil, fmt.Errorf("exec query '%s' with args %+v, must return a database/sql/driver.result, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
 
-	return expected.result, err
+	return expected, nil
 }
 
 func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
@@ -263,6 +296,16 @@ func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 
 // Prepare meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
+	ex, err := c.prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(ex.delay)
+	return &statement{c, query, ex.closeErr}, nil
+}
+
+func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	var expected *ExpectedPrepare
 	var fulfilled int
 	var ok bool
@@ -298,7 +341,7 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 	}
 
 	expected.triggered = true
-	return &statement{c, query, expected.closeErr}, expected.err
+	return expected, expected.err
 }
 
 func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
@@ -308,8 +351,32 @@ func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
 	return e
 }
 
+type namedValue struct {
+	Name    string
+	Ordinal int
+	Value   driver.Value
+}
+
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer
-func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err error) {
+func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) {
+	namedArgs := make([]namedValue, len(args))
+	for i, v := range args {
+		namedArgs[i] = namedValue{
+			Ordinal: i + 1,
+			Value:   v,
+		}
+	}
+
+	ex, err := c.query(query, namedArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	time.Sleep(ex.delay)
+	return ex.rows, nil
+}
+
+func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error) {
 	query = stripQuery(query)
 	var expected *ExpectedQuery
 	var fulfilled int
@@ -357,7 +424,6 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 	}
 
 	expected.triggered = true
-
 	if expected.err != nil {
 		return nil, expected.err // mocked to return error
 	}
@@ -365,8 +431,7 @@ func (c *sqlmock) Query(query string, args []driver.Value) (rw driver.Rows, err 
 	if expected.rows == nil {
 		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
-
-	return expected.rows, err
+	return expected, nil
 }
 
 func (c *sqlmock) ExpectQuery(sqlRegexStr string) *ExpectedQuery {

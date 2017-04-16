@@ -16,6 +16,10 @@ maintain correct **TDD** workflow.
 - has strict by default expectation order matching.
 - has no third party dependencies.
 
+**NOTE:** in **v1.2.0** **sqlmock.Rows** has changed to struct from interface, if you were using any type references to that
+interface, you will need to switch it to a pointer struct type. Also, **sqlmock.Rows** were used to implement **driver.Rows**
+interface, which was not required or useful for mocking and was removed. Hope it will not cause issues.
+
 ## Install
 
     go get gopkg.in/DATA-DOG/go-sqlmock.v1

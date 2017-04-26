@@ -153,7 +153,7 @@ func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
 
 // String returns string representation
 func (e *ExpectedQuery) String() string {
-	msg := "ExpectedQuery => expecting Query or QueryRow which:"
+	msg := "ExpectedQuery => expecting Query, QueryContext or QueryRow which:"
 	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
 
 	if len(e.args) == 0 {
@@ -208,7 +208,7 @@ func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 
 // String returns string representation
 func (e *ExpectedExec) String() string {
-	msg := "ExpectedExec => expecting Exec which:"
+	msg := "ExpectedExec => expecting Exec or ExecContext which:"
 	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
 
 	if len(e.args) == 0 {

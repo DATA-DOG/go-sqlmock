@@ -23,7 +23,7 @@ func ExampleNewResult() {
 	result := NewResult(lastInsertID, affected)
 	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
 	fmt.Println(mock.ExpectationsWereMet())
-	// Output: there is a remaining expectation which was not matched: ExpectedExec => expecting Exec which:
+	// Output: there is a remaining expectation which was not matched: ExpectedExec => expecting Exec or ExecContext which:
 	//   - matches sql: '^INSERT (.+)'
 	//   - is without arguments
 	//   - should return Result having:

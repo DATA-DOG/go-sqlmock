@@ -49,6 +49,10 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 
 // transforms to debuggable printable string
 func (rs *rowSets) String() string {
+	if rs.empty() {
+		return "with empty rows"
+	}
+
 	msg := "should return rows:\n"
 	if len(rs.sets) == 1 {
 		for n, row := range rs.sets[0].rows {
@@ -63,6 +67,15 @@ func (rs *rowSets) String() string {
 		}
 	}
 	return strings.TrimSpace(msg)
+}
+
+func (rs *rowSets) empty() bool {
+	for _, set := range rs.sets {
+		if len(set.rows) > 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // Rows is a mocked collection of rows to

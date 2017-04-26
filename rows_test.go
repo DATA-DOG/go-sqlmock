@@ -263,3 +263,23 @@ func TestWrongNumberOfValues(t *testing.T) {
 	// shouldn't reach here
 	t.Error("expected panic from query")
 }
+
+func TestEmptyRowSets(t *testing.T) {
+	rs1 := NewRows([]string{"a"}).AddRow("a")
+	rs2 := NewRows([]string{"b"})
+	rs3 := NewRows([]string{"c"})
+
+	set1 := &rowSets{sets: []*Rows{rs1, rs2}}
+	set2 := &rowSets{sets: []*Rows{rs3, rs2}}
+	set3 := &rowSets{sets: []*Rows{rs2}}
+
+	if set1.empty() {
+		t.Fatalf("expected rowset 1, not to be empty, but it was")
+	}
+	if !set2.empty() {
+		t.Fatalf("expected rowset 2, to be empty, but it was not")
+	}
+	if !set3.empty() {
+		t.Fatalf("expected rowset 3, to be empty, but it was not")
+	}
+}

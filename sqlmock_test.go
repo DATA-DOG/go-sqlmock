@@ -354,7 +354,6 @@ func TestPreparedQueryExecutions(t *testing.T) {
 	}
 }
 
-
 func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
@@ -369,14 +368,14 @@ func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 		ExpectQuery().
 		WithArgs(5).
 		WillReturnRows(
-		NewRows([]string{"id", "title"}).FromCSVString("5,The quick brown fox"),
-	)
+			NewRows([]string{"id", "title"}).FromCSVString("5,The quick brown fox"),
+		)
 	mock.ExpectPrepare("SELECT (.+) FROM authors WHERE id = ?").
 		ExpectQuery().
 		WithArgs(1).
 		WillReturnRows(
-		NewRows([]string{"id", "title"}).FromCSVString("1,Betty B."),
-	)
+			NewRows([]string{"id", "title"}).FromCSVString("1,Betty B."),
+		)
 
 	var id int
 	var name string

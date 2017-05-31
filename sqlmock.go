@@ -309,9 +309,9 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	var expected *ExpectedPrepare
 	var fulfilled int
 	var ok bool
-	
+
 	query = stripQuery(query)
-	
+
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -328,7 +328,7 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 			next.Unlock()
 			return nil, fmt.Errorf("call to Prepare statement with query '%s', was not expected, next expectation is: %s", query, next)
 		}
-		
+
 		if pr, ok := next.(*ExpectedPrepare); ok {
 			if pr.sqlRegex.MatchString(query) {
 				expected = pr

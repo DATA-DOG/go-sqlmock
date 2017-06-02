@@ -8,7 +8,7 @@ go:
   - 1.6.x
   - 1.7.x
   - 1.8.x
-  # - tip # sadly fails most of thw times
+  # - tip # sadly fails most of the times
 
 script:
   - go vet

@@ -367,15 +367,11 @@ func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").
 		ExpectQuery().
 		WithArgs(5).
-		WillReturnRows(
-			NewRows([]string{"id", "title"}).FromCSVString("5,The quick brown fox"),
-		)
+		WillReturnRows(NewRows([]string{"id", "title"}).FromCSVString("5,The quick brown fox"))
 	mock.ExpectPrepare("SELECT (.+) FROM authors WHERE id = ?").
 		ExpectQuery().
 		WithArgs(1).
-		WillReturnRows(
-			NewRows([]string{"id", "title"}).FromCSVString("1,Betty B."),
-		)
+		WillReturnRows(NewRows([]string{"id", "title"}).FromCSVString("1,Betty B."))
 
 	var id int
 	var name string

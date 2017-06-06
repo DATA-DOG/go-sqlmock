@@ -53,6 +53,33 @@ func Example() {
 	// Output:
 }
 
+// TestIssue61ConcurrentExpectQuery ensures there's no race between
+// db.Query and mock.ExpectQuery when running with go test -race
+func TestIssue61ConcurrentExpectQuery(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// Constantly call query in a background thread
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				_, _ = db.Query("SELECT 1")
+			}
+		}
+	}()
+
+	// Execute ExpectQuery, if race detector is enabled this will fail if there's a race
+	mock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE")
+	close(done)
+}
+
 func TestIssue14EscapeSQL(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()

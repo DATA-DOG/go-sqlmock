@@ -56,3 +56,43 @@ func TestByteSliceArgument(t *testing.T) {
 		t.Errorf("there were unfulfilled expections: %s", err)
 	}
 }
+
+func TestNotEmptyArgument(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec("INSERT INTO users").
+		WithArgs(NotEmptyArg(), NotEmptyArg()).
+		WillReturnResult(NewResult(1, 1))
+
+	_, err = db.Exec("INSERT INTO users(name, created_at) VALUES (?, ?)", "yegor", time.Now())
+	if err != nil {
+		t.Errorf("error '%s' was not expected, while inserting a row", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
+func TestEmptyArgument(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec("INSERT INTO users").
+		WithArgs(NotEmptyArg()).
+		WillReturnResult(NewResult(1, 1))
+
+	_, err = db.Exec("INSERT INTO users(name) VALUES (?)", "")
+	if err == nil {
+		t.Errorf("expected empty value error")
+	}
+}

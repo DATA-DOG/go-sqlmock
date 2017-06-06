@@ -354,6 +354,57 @@ func TestPreparedQueryExecutions(t *testing.T) {
 	}
 }
 
+func TestPreparedQueryMultipleExecutions(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.MatchExpectationsInOrder(false)
+	mock.AllowRepeatedExpectationMatching(true)
+
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").ExpectQuery().
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	stmt, err := db.Prepare("SELECT id, title FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while creating a prepared statement", err)
+	}
+
+	stmt2, err := db.Prepare("SELECT id, title FROM articles WHERE id = ?")
+	if err != nil {
+		t.Errorf("error '%s' was not expected while creating a prepared statement", err)
+	}
+
+	var id1, id2 int
+	var title1, title2 string
+	err = stmt.QueryRow(5).Scan(&id1, &title1)
+	if err != nil {
+		t.Errorf("error '%s' was not expected querying row from statement and scanning", err)
+	}
+
+	err = stmt2.QueryRow(5).Scan(&id2, &title2)
+	if err != nil {
+		t.Errorf("error '%s' was not expected querying row from statement and scanning", err)
+	}
+
+	if id1 != 5 || id2 != 5 {
+		t.Errorf("expected mocked id to be 5, but got %d instead", id2)
+	}
+
+	if title1 != "hello world" || title2 != "hello world" {
+		t.Errorf("expected mocked title to be 'hello world', but got '%s' instead", title2)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}
+
 func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()

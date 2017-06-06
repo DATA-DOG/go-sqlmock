@@ -73,13 +73,26 @@ type Sqlmock interface {
 	// in any order. Or otherwise if switched to true, any unmatched
 	// expectations will be expected in order
 	MatchExpectationsInOrder(bool)
+
+	// AllowRepeatedExpectationMatching gives an option whether or not to
+	// allow expectations to be matched more than once.
+	//
+	// By default it is set to - false.
+	//
+	// This option may be turned on anytime during tests. As soon
+	// as it is switched to true, expectations will be allowed to match
+	// regardless of it has been previously matched against.
+	//
+	// When setting this true, consider if you will need to set MatchExpectationsInOrder(false)
+	AllowRepeatedExpectationMatching(bool)
 }
 
 type sqlmock struct {
-	ordered bool
-	dsn     string
-	opened  int
-	drv     *mockDriver
+	ordered    bool
+	repeatable bool
+	dsn        string
+	opened     int
+	drv        *mockDriver
 
 	expected []expectation
 }
@@ -102,6 +115,10 @@ func (c *sqlmock) MatchExpectationsInOrder(b bool) {
 	c.ordered = b
 }
 
+func (c *sqlmock) AllowRepeatedExpectationMatching(b bool) {
+	c.repeatable = b
+}
+
 // Close a mock database driver connection. It may or may not
 // be called depending on the sircumstances, but if it is called
 // there must be an *ExpectedClose expectation satisfied.
@@ -121,9 +138,11 @@ func (c *sqlmock) Close() error {
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
-			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				next.Unlock()
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedClose); ok {
@@ -178,7 +197,9 @@ func (c *sqlmock) begin() (*ExpectedBegin, error) {
 		if next.fulfilled() {
 			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedBegin); ok {
@@ -239,7 +260,9 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 		if next.fulfilled() {
 			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -315,9 +338,12 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
-			next.Unlock()
 			fulfilled++
-			continue
+
+			if !c.repeatable {
+				next.Unlock()
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -394,9 +420,11 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
-			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				next.Unlock()
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -441,6 +469,14 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	if expected.rows == nil {
 		return nil, fmt.Errorf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
+
+	// reset rows for next use if allowed
+	if rs, ok := expected.rows.(*rowSets); ok {
+		rs.pos = 0
+		for _, set := range rs.sets {
+			set.pos = 0
+		}
+	}
 	return expected, nil
 }
 
@@ -474,7 +510,9 @@ func (c *sqlmock) Commit() error {
 		if next.fulfilled() {
 			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedCommit); ok {
@@ -509,7 +547,9 @@ func (c *sqlmock) Rollback() error {
 		if next.fulfilled() {
 			next.Unlock()
 			fulfilled++
-			continue
+			if !c.repeatable {
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedRollback); ok {

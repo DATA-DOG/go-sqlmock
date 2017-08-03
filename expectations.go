@@ -265,7 +265,7 @@ func (e *ExpectedPrepare) WillReturnError(err error) *ExpectedPrepare {
 	return e
 }
 
-// WillReturnCloseError allows to set an error for this prapared statement Close action
+// WillReturnCloseError allows to set an error for this prepared statement Close action
 func (e *ExpectedPrepare) WillReturnCloseError(err error) *ExpectedPrepare {
 	e.closeErr = err
 	return e

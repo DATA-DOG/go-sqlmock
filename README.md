@@ -100,7 +100,8 @@ func TestShouldUpdateStats(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-
+	
+	db.Begin()
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO product_viewers").WithArgs(2, 3).WillReturnResult(sqlmock.NewResult(1, 1))

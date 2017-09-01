@@ -75,7 +75,7 @@ func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt
 
 	select {
 	case <-time.After(ex.delay):
-		return &statement{c, query, ex.closeErr}, nil
+		return &statement{c, ex, query}, nil
 	case <-ctx.Done():
 		return nil, ErrCancelled
 	}

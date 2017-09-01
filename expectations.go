@@ -252,11 +252,13 @@ func (e *ExpectedExec) WillReturnResult(result driver.Result) *ExpectedExec {
 // Returned by *Sqlmock.ExpectPrepare.
 type ExpectedPrepare struct {
 	commonExpectation
-	mock      *sqlmock
-	sqlRegex  *regexp.Regexp
-	statement driver.Stmt
-	closeErr  error
-	delay     time.Duration
+	mock         *sqlmock
+	sqlRegex     *regexp.Regexp
+	statement    driver.Stmt
+	closeErr     error
+	mustBeClosed bool
+	wasClosed    bool
+	delay        time.Duration
 }
 
 // WillReturnError allows to set an error for the expected *sql.DB.Prepare or *sql.Tx.Prepare action.
@@ -275,6 +277,13 @@ func (e *ExpectedPrepare) WillReturnCloseError(err error) *ExpectedPrepare {
 // result. May be used together with Context
 func (e *ExpectedPrepare) WillDelayFor(duration time.Duration) *ExpectedPrepare {
 	e.delay = duration
+	return e
+}
+
+// WillBeClosed expects this prepared statement to
+// be closed.
+func (e *ExpectedPrepare) WillBeClosed() *ExpectedPrepare {
+	e.mustBeClosed = true
 	return e
 }
 

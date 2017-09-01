@@ -1033,3 +1033,33 @@ func TestExpectedBeginOrder(t *testing.T) {
 		t.Error("an error was expected when calling close, but got none")
 	}
 }
+
+func TestPreparedStatementCloseExpectation(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	defer db.Close()
+
+	ep := mock.ExpectPrepare("INSERT INTO ORDERS").WillBeClosed()
+	ep.ExpectExec().WillReturnResult(NewResult(1, 1))
+
+	stmt, err := db.Prepare("INSERT INTO ORDERS(ID, STATUS) VALUES (?, ?)")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := stmt.Exec(1, "Hello"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := stmt.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expections: %s", err)
+	}
+}

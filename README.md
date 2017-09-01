@@ -190,6 +190,8 @@ It only asserts that argument is of `time.Time` type.
 
 ## Change Log
 
+- **2017-09-01** - it is now possible to expect that prepared statement will be closed,
+  using **ExpectedPrepare.WillBeClosed**.
 - **2017-02-09** - implemented support for **go1.8** features. **Rows** interface was changed to struct
   but contains all methods as before and should maintain backwards compatibility. **ExpectedQuery.WillReturnRows** may now
   accept multiple row sets.

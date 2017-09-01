@@ -154,6 +154,13 @@ func (c *sqlmock) ExpectationsWereMet() error {
 		if !e.fulfilled() {
 			return fmt.Errorf("there is a remaining expectation which was not matched: %s", e)
 		}
+
+		// for expected prepared statement check whether it was closed if expected
+		if prep, ok := e.(*ExpectedPrepare); ok {
+			if prep.mustBeClosed && !prep.wasClosed {
+				return fmt.Errorf("expected prepared statement to be closed, but it was not: %s", prep)
+			}
+		}
 	}
 	return nil
 }
@@ -302,7 +309,7 @@ func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 	}
 
 	time.Sleep(ex.delay)
-	return &statement{c, query, ex.closeErr}, nil
+	return &statement{c, ex, query}, nil
 }
 
 func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {

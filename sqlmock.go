@@ -73,6 +73,10 @@ type Sqlmock interface {
 	// in any order. Or otherwise if switched to true, any unmatched
 	// expectations will be expected in order
 	MatchExpectationsInOrder(bool)
+	// AppendExpectations is used to append the given expectations to expected slice in the underlying sqlmock struct.
+	Expectations() []expectation
+	// AppendExpectations is used to append the given expectations to expected slice in the underlying sqlmock struct.
+	Join(sqlmock Sqlmock)
 }
 
 type sqlmock struct {
@@ -102,8 +106,16 @@ func (c *sqlmock) MatchExpectationsInOrder(b bool) {
 	c.ordered = b
 }
 
+func (c *sqlmock) Expectations() []expectation {
+	return c.expected
+}
+
+func (c *sqlmock) Join(sqlmock Sqlmock) {
+	c.expected = append(c.expected, sqlmock.Expectations()...)
+}
+
 // Close a mock database driver connection. It may or may not
-// be called depending on the sircumstances, but if it is called
+// be called depending on the circumstances, but if it is called
 // there must be an *ExpectedClose expectation satisfied.
 // meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Close() error {

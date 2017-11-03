@@ -1073,13 +1073,13 @@ func TestJoinMocks(t *testing.T) {
 	_, mock1, _ := New()
 
 	mock1.ExpectExec(mock1Query).
-		WithArgs("foo").
+		WithArgs(AnyArg()).
 		WillReturnResult(NewResult(1, 1))
 
 	_, mock2, _ := New()
 
 	mock2.ExpectExec(mock2Query).
-		WithArgs("bar").
+		WithArgs(AnyArg()).
 		WillReturnResult(NewResult(1, 1))
 
 	mock1.Join(mock2)
@@ -1089,13 +1089,11 @@ func TestJoinMocks(t *testing.T) {
 	}
 
 	regex := regexp.MustCompile(mock1Query)
-
 	if ! regex.MatchString(mock1.Expectations()[0].String()) {
 		t.Errorf("did not find %v pattern in first expectiation string: %v", mock1Query, mock1.Expectations()[0].String())
 	}
 
 	regex = regexp.MustCompile(mock2Query)
-
 	if ! regex.MatchString(mock1.Expectations()[1].String()) {
 		t.Errorf("did not find %v pattern in second expectation string: %v", mock1Query, mock1.Expectations()[1].String())
 	}

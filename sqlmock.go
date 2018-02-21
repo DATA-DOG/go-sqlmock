@@ -168,11 +168,13 @@ func (c *sqlmock) ExpectationsWereMet() error {
 // Begin meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Begin() (driver.Tx, error) {
 	ex, err := c.begin()
+	if ex != nil {
+		time.Sleep(ex.delay)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	time.Sleep(ex.delay)
 	return c, nil
 }
 
@@ -228,11 +230,13 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error)
 	}
 
 	ex, err := c.exec(query, namedArgs)
+	if ex != nil {
+		time.Sleep(ex.delay)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	time.Sleep(ex.delay)
 	return ex.result, nil
 }
 
@@ -283,7 +287,7 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 
 	expected.triggered = true
 	if expected.err != nil {
-		return nil, expected.err // mocked to return error
+		return expected, expected.err // mocked to return error
 	}
 
 	if expected.result == nil {
@@ -304,11 +308,13 @@ func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 // Prepare meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Prepare(query string) (driver.Stmt, error) {
 	ex, err := c.prepare(query)
+	if ex != nil {
+		time.Sleep(ex.delay)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	time.Sleep(ex.delay)
 	return &statement{c, ex, query}, nil
 }
 
@@ -385,11 +391,13 @@ func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) 
 	}
 
 	ex, err := c.query(query, namedArgs)
+	if ex != nil {
+		time.Sleep(ex.delay)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	time.Sleep(ex.delay)
 	return ex.rows, nil
 }
 
@@ -442,7 +450,7 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 
 	expected.triggered = true
 	if expected.err != nil {
-		return nil, expected.err // mocked to return error
+		return expected, expected.err // mocked to return error
 	}
 
 	if expected.rows == nil {

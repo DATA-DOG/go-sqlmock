@@ -9,6 +9,7 @@ go:
   - 1.7.x
   - 1.8.x
   - 1.9.x
+  - 1.10.x
   # - tip # sadly fails most of the times
 
 script:

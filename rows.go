@@ -95,6 +95,14 @@ func NewRows(columns []string) *Rows {
 	return &Rows{cols: columns, nextErr: make(map[int]error)}
 }
 
+// Close allows rows to be closed.
+func (r *Rows) Close() error {
+	if r.closeErr != nil {
+		return r.closeErr
+	}
+	return nil
+}
+
 // CloseError allows to set an error
 // which will be returned by rows.Close
 // function.

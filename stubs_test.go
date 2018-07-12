@@ -50,13 +50,19 @@ func (ni *NullInt) Scan(value interface{}) (err error) {
 		ni.Integer, ni.Valid = int(v), true
 		return
 	case []byte:
-		ni.Integer, err = strconv.Atoi(string(v))
-		ni.Valid = (err == nil)
-		return
+		n, err := strconv.Atoi(string(v))
+		if err != nil {
+			return err
+		}
+		ni.Integer, ni.Valid = n, true
+		return nil
 	case string:
-		ni.Integer, err = strconv.Atoi(v)
-		ni.Valid = (err == nil)
-		return
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return err
+		}
+		ni.Integer, ni.Valid = n, true
+		return nil
 	}
 
 	ni.Valid = false

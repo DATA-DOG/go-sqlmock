@@ -1,5 +1,7 @@
 language: go
 
+go_import_path: gopkg.in/DATA-DOG/go-sqlmock.v1
+
 go:
   - 1.2.x
   - 1.3.x

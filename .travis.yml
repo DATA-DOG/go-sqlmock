@@ -12,6 +12,8 @@ go:
   - 1.10.x
   # - tip # sadly fails most of the times
 
+sudo: false
+
 script:
   - go vet
   - test -z "$(go fmt ./...)" # fail if not formatted properly

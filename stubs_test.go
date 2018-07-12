@@ -74,7 +74,7 @@ func (ni NullInt) Value() (driver.Value, error) {
 	if !ni.Valid {
 		return nil, nil
 	}
-	return ni.Integer, nil
+	return int64(ni.Integer), nil
 }
 
 // Satisfy sql.Scanner interface

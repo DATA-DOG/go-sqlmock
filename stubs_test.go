@@ -2,6 +2,7 @@ package sqlmock
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -25,8 +26,28 @@ func (ni *NullInt) Scan(value interface{}) (err error) {
 	}
 
 	switch v := value.(type) {
-	case int, int8, int16, int32, int64:
-		ni.Integer, ni.Valid = v.(int), true
+	case int:
+		ni.Integer, ni.Valid = v, true
+		return
+	case int8:
+		ni.Integer, ni.Valid = int(v), true
+		return
+	case int16:
+		ni.Integer, ni.Valid = int(v), true
+		return
+	case int32:
+		ni.Integer, ni.Valid = int(v), true
+		return
+	case int64:
+		const maxUint = ^uint(0)
+		const minUint = 0
+		const maxInt = int(maxUint >> 1)
+		const minInt = -maxInt - 1
+
+		if v > int64(maxInt) || v < int64(minInt) {
+			return errors.New("value out of int range")
+		}
+		ni.Integer, ni.Valid = int(v), true
 		return
 	case []byte:
 		ni.Integer, err = strconv.Atoi(string(v))

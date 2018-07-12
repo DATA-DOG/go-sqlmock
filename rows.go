@@ -126,6 +126,17 @@ func (r *Rows) AddRow(values ...driver.Value) *Rows {
 
 	row := make([]driver.Value, len(r.cols))
 	for i, v := range values {
+		// Convert user-friendly values (such as int or driver.Valuer)
+		// to database/sql native value (driver.Value such as int64)
+		var err error
+		v, err = driver.DefaultParameterConverter.ConvertValue(v)
+		if err != nil {
+			panic(fmt.Errorf(
+				"row #%d, column #%d (%q) type %T: %s",
+				len(r.rows)+1, i, r.cols[i], values[i], err,
+			))
+		}
+
 		row[i] = v
 	}
 

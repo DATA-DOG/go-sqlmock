@@ -54,8 +54,7 @@ func (ni *NullInt) Scan(value interface{}) error {
 		}
 		ni.Integer, ni.Valid = n, true
 	default:
-		ni.Valid = false
-		return fmt.Errorf("Can't convert %T to integer", value)
+		return fmt.Errorf("can't convert %T to integer", value)
 	}
 	return nil
 }
@@ -76,8 +75,7 @@ func (nt *NullTime) Scan(value interface{}) error {
 	case time.Time:
 		nt.Time, nt.Valid = v, true
 	default:
-		nt.Valid = false
-		return fmt.Errorf("Can't convert %T to time.Time", value)
+		return fmt.Errorf("can't convert %T to time.Time", value)
 	}
 	return nil
 }

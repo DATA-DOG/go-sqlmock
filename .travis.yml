@@ -19,7 +19,7 @@ sudo: false
 script:
   - go vet
   - test -z "$(go fmt ./...)" # fail if not formatted properly
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
+  - go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

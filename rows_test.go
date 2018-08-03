@@ -88,6 +88,38 @@ func ExampleRows_closeError() {
 	// Output: got error: close error
 }
 
+func ExampleRows_customDriverValue() {
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("failed to open sqlmock database:", err)
+	}
+	defer db.Close()
+
+	rows := NewRows([]string{"id", "null_int"}).
+		AddRow(1, 7).
+		AddRow(5, sql.NullInt64{Int64: 5, Valid: true}).
+		AddRow(2, sql.NullInt64{})
+
+	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+
+	rs, _ := db.Query("SELECT")
+	defer rs.Close()
+
+	for rs.Next() {
+		var id int
+		var num sql.NullInt64
+		rs.Scan(&id, &num)
+		fmt.Println("scanned id:", id, "and null int64:", num)
+	}
+
+	if rs.Err() != nil {
+		fmt.Println("got rows error:", rs.Err())
+	}
+	// Output: scanned id: 1 and null int64: {7 true}
+	// scanned id: 5 and null int64: {5 true}
+	// scanned id: 2 and null int64: {0 false}
+}
+
 func TestAllowsToSetRowsErrors(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()

@@ -849,6 +849,32 @@ func TestRollbackThrow(t *testing.T) {
 	// Output:
 }
 
+func TestUnexpectedBegin(t *testing.T) {
+	// Open new mock database
+	db, _, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	if _, err := db.Begin(); err == nil {
+		t.Error("an error was expected when calling begin, but got none")
+	}
+}
+
+func TestUnexpectedExec(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	db.Begin()
+	if _, err := db.Exec("SELECT 1"); err == nil {
+		t.Error("an error was expected when calling exec, but got none")
+	}
+}
+
 func TestUnexpectedCommit(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()

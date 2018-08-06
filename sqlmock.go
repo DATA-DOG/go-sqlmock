@@ -180,12 +180,6 @@ func (c *sqlmock) ExpectationsWereMet() error {
 	return nil
 }
 
-// CheckNamedValue meets https://golang.org/pkg/database/sql/driver/#NamedValueChecker
-func (c *sqlmock) CheckNamedValue(nv *driver.NamedValue) (err error) {
-	nv.Value, err = c.converter.ConvertValue(nv.Value)
-	return err
-}
-
 // Begin meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Begin() (driver.Tx, error) {
 	ex, err := c.begin()

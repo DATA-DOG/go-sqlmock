@@ -111,3 +111,9 @@ func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValu
 }
 
 // @TODO maybe add ExpectedBegin.WithOptions(driver.TxOptions)
+
+// CheckNamedValue meets https://golang.org/pkg/database/sql/driver/#NamedValueChecker
+func (c *sqlmock) CheckNamedValue(nv *driver.NamedValue) (err error) {
+	nv.Value, err = c.converter.ConvertValue(nv.Value)
+	return err
+}

@@ -81,18 +81,24 @@ func (rs *rowSets) empty() bool {
 // Rows is a mocked collection of rows to
 // return for Query result
 type Rows struct {
-	cols     []string
-	rows     [][]driver.Value
-	pos      int
-	nextErr  map[int]error
-	closeErr error
+	converter driver.ValueConverter
+	cols      []string
+	rows      [][]driver.Value
+	pos       int
+	nextErr   map[int]error
+	closeErr  error
 }
 
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
-// to be used as sql driver.Rows
+// to be used as sql driver.Rows.
+// Use Sqlmock.NewRows instead if using a custom converter
 func NewRows(columns []string) *Rows {
-	return &Rows{cols: columns, nextErr: make(map[int]error)}
+	return &Rows{
+		cols:      columns,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
+	}
 }
 
 // CloseError allows to set an error
@@ -129,7 +135,7 @@ func (r *Rows) AddRow(values ...driver.Value) *Rows {
 		// Convert user-friendly values (such as int or driver.Valuer)
 		// to database/sql native value (driver.Value such as int64)
 		var err error
-		v, err = driver.DefaultParameterConverter.ConvertValue(v)
+		v, err = r.converter.ConvertValue(v)
 		if err != nil {
 			panic(fmt.Errorf(
 				"row #%d, column #%d (%q) type %T: %s",

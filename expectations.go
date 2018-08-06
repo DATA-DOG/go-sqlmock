@@ -292,6 +292,7 @@ func (e *ExpectedPrepare) WillBeClosed() *ExpectedPrepare {
 func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 	eq := &ExpectedQuery{}
 	eq.sqlRegex = e.sqlRegex
+	eq.converter = e.mock.converter
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
 }
@@ -301,6 +302,7 @@ func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 	eq := &ExpectedExec{}
 	eq.sqlRegex = e.sqlRegex
+	eq.converter = e.mock.converter
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
 }
@@ -325,8 +327,9 @@ func (e *ExpectedPrepare) String() string {
 // adds a query matching logic
 type queryBasedExpectation struct {
 	commonExpectation
-	sqlRegex *regexp.Regexp
-	args     []driver.Value
+	sqlRegex  *regexp.Regexp
+	converter driver.ValueConverter
+	args      []driver.Value
 }
 
 func (e *queryBasedExpectation) attemptMatch(sql string, args []namedValue) (err error) {

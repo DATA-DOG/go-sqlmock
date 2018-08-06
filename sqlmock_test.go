@@ -1113,3 +1113,31 @@ func TestExecExpectationErrorDelay(t *testing.T) {
 		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
 	}
 }
+
+func TestOptionsFail(t *testing.T) {
+	t.Parallel()
+	expected := errors.New("failing option")
+	option := func(*sqlmock) error {
+		return expected
+	}
+	db, _, err := New(option)
+	defer db.Close()
+	if err == nil {
+		t.Errorf("missing expecting error '%s' when opening a stub database connection", expected)
+	}
+}
+
+func TestNewRows(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	columns := []string{"col1", "col2"}
+
+	r := mock.NewRows(columns)
+	if len(r.cols) != len(columns) || r.cols[0] != columns[0] || r.cols[1] != columns[1] {
+		t.Errorf("expecting to create a row with columns %v, actual colmns are %v", r.cols, columns)
+	}
+}

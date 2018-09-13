@@ -11,7 +11,7 @@ import (
 // CSVColumnParser is a function which converts trimmed csv
 // column string to a []byte representation. currently
 // transforms NULL to nil
-var CSVColumnParser = func(s string) []byte {
+var CSVColumnParser = func(s string) driver.Value {
 	switch {
 	case strings.ToLower(s) == "null":
 		return nil

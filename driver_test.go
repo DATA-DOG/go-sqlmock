@@ -100,7 +100,7 @@ func TestTwoOpenConnectionsOnTheSameDSN(t *testing.T) {
 
 func TestWithOptions(t *testing.T) {
 	c := &converter{}
-	_, mock, err := New(WithValueConverter(c))
+	_, mock, err := New(ValueConverterOption(c))
 	if err != nil {
 		t.Errorf("expected no error, but got: %s", err)
 	}

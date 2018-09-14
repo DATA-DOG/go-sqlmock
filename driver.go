@@ -35,8 +35,9 @@ func (d *mockDriver) Open(dsn string) (driver.Conn, error) {
 	return c, nil
 }
 
-// New creates sqlmock database connection
-// and a mock to manage expectations.
+// New creates sqlmock database connection and a mock to manage expectations.
+// Accepts options, like ValueConverterOption, to use a ValueConverter from
+// a specific driver.
 // Pings db so that all expectations could be
 // asserted.
 func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
@@ -51,8 +52,10 @@ func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	return smock.open(options)
 }
 
-// NewWithDSN creates sqlmock database connection
-// with a specific DSN and a mock to manage expectations.
+// NewWithDSN creates sqlmock database connection with a specific DSN
+// and a mock to manage expectations.
+// Accepts options, like ValueConverterOption, to use a ValueConverter from
+// a specific driver.
 // Pings db so that all expectations could be asserted.
 //
 // This method is introduced because of sql abstraction
@@ -75,13 +78,4 @@ func NewWithDSN(dsn string, options ...func(*sqlmock) error) (*sql.DB, Sqlmock, 
 	pool.Unlock()
 
 	return smock.open(options)
-}
-
-// WithValueConverter allows to create a sqlmock connection
-// with a custom ValueConverter to support drivers with special data types.
-func WithValueConverter(converter driver.ValueConverter) func(*sqlmock) error {
-	return func(s *sqlmock) error {
-		s.converter = converter
-		return nil
-	}
 }

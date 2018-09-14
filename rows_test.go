@@ -315,3 +315,53 @@ func TestEmptyRowSets(t *testing.T) {
 		t.Fatalf("expected rowset 3, to be empty, but it was not")
 	}
 }
+
+func TestNullScanFromCSV(t *testing.T) {
+
+	const query string = "select nullable from TableWithNulls"
+
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"nullable"}).AddRow(1).AddRow(nil).FromCSVString("null")
+
+	mock.ExpectQuery(query).WillReturnRows(rs)
+
+	var expectedResults = []sql.NullInt64{
+		{Valid: true, Int64: 1},
+		{Valid: false, Int64: 0},
+		{Valid: false, Int64: 0},
+	}
+
+	rows, err := db.Query(query)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when querying a stub database connection", err)
+	}
+	defer rows.Close()
+
+	var actualResults []sql.NullInt64
+	for rows.Next() {
+		var ni sql.NullInt64
+		if err = rows.Scan(&ni); err != nil {
+			t.Fatalf("an error '%s' was not expected while scanning row from mocked recordset", err)
+		}
+		actualResults = append(actualResults, ni)
+	}
+
+	if len(expectedResults) != len(actualResults) {
+		t.Fatalf("unexpected row count: wanted %d, got %d", len(expectedResults), len(actualResults))
+	}
+
+	for i, v := range actualResults {
+		if v != expectedResults[i] {
+			t.Fatalf("unexpected value in row %d: wanted %v, got %v", i, expectedResults[i], v)
+		}
+	}
+
+	if err = mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}

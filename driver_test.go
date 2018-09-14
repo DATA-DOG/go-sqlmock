@@ -1,6 +1,8 @@
 package sqlmock
 
 import (
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -8,6 +10,12 @@ import (
 type void struct{}
 
 func (void) Print(...interface{}) {}
+
+type converter struct{}
+
+func (c *converter) ConvertValue(v interface{}) (driver.Value, error) {
+	return nil, errors.New("converter disabled")
+}
 
 func ExampleNew() {
 	db, mock, err := New()
@@ -87,6 +95,18 @@ func TestTwoOpenConnectionsOnTheSameDSN(t *testing.T) {
 	}
 	if mock == mock2 {
 		t.Errorf("expected not the same mock instance, but it is the same")
+	}
+}
+
+func TestWithOptions(t *testing.T) {
+	c := &converter{}
+	_, mock, err := New(ValueConverterOption(c))
+	if err != nil {
+		t.Errorf("expected no error, but got: %s", err)
+	}
+	smock, _ := mock.(*sqlmock)
+	if smock.converter.(*converter) != c {
+		t.Errorf("expected a custom converter to be set")
 	}
 }
 

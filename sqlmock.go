@@ -73,21 +73,36 @@ type Sqlmock interface {
 	// in any order. Or otherwise if switched to true, any unmatched
 	// expectations will be expected in order
 	MatchExpectationsInOrder(bool)
+
+	// NewRows allows Rows to be created from a
+	// sql driver.Value slice or from the CSV string and
+	// to be used as sql driver.Rows.
+	NewRows(columns []string) *Rows
 }
 
 type sqlmock struct {
-	ordered bool
-	dsn     string
-	opened  int
-	drv     *mockDriver
+	ordered   bool
+	dsn       string
+	opened    int
+	drv       *mockDriver
+	converter driver.ValueConverter
 
 	expected []expectation
 }
 
-func (c *sqlmock) open() (*sql.DB, Sqlmock, error) {
+func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	db, err := sql.Open("sqlmock", c.dsn)
 	if err != nil {
 		return db, c, err
+	}
+	for _, option := range options {
+		err := option(c)
+		if err != nil {
+			return db, c, err
+		}
+	}
+	if c.converter == nil {
+		c.converter = driver.DefaultParameterConverter
 	}
 	return db, c, db.Ping()
 }
@@ -301,6 +316,7 @@ func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
 	e := &ExpectedExec{}
 	sqlRegexStr = stripQuery(sqlRegexStr)
 	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
+	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
 }
@@ -463,6 +479,7 @@ func (c *sqlmock) ExpectQuery(sqlRegexStr string) *ExpectedQuery {
 	e := &ExpectedQuery{}
 	sqlRegexStr = stripQuery(sqlRegexStr)
 	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
+	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
 }
@@ -547,4 +564,13 @@ func (c *sqlmock) Rollback() error {
 	expected.triggered = true
 	expected.Unlock()
 	return expected.err
+}
+
+// NewRows allows Rows to be created from a
+// sql driver.Value slice or from the CSV string and
+// to be used as sql driver.Rows.
+func (c *sqlmock) NewRows(columns []string) *Rows {
+	r := NewRows(columns)
+	r.converter = c.converter
+	return r
 }

@@ -849,6 +849,32 @@ func TestRollbackThrow(t *testing.T) {
 	// Output:
 }
 
+func TestUnexpectedBegin(t *testing.T) {
+	// Open new mock database
+	db, _, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	if _, err := db.Begin(); err == nil {
+		t.Error("an error was expected when calling begin, but got none")
+	}
+}
+
+func TestUnexpectedExec(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	db.Begin()
+	if _, err := db.Exec("SELECT 1"); err == nil {
+		t.Error("an error was expected when calling exec, but got none")
+	}
+}
+
 func TestUnexpectedCommit(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()
@@ -1111,5 +1137,33 @@ func TestExecExpectationErrorDelay(t *testing.T) {
 	elapsed = stop.Sub(start)
 	if elapsed > delay {
 		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
+	}
+}
+
+func TestOptionsFail(t *testing.T) {
+	t.Parallel()
+	expected := errors.New("failing option")
+	option := func(*sqlmock) error {
+		return expected
+	}
+	db, _, err := New(option)
+	defer db.Close()
+	if err == nil {
+		t.Errorf("missing expecting error '%s' when opening a stub database connection", expected)
+	}
+}
+
+func TestNewRows(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	columns := []string{"col1", "col2"}
+
+	r := mock.NewRows(columns)
+	if len(r.cols) != len(columns) || r.cols[0] != columns[0] || r.cols[1] != columns[1] {
+		t.Errorf("expecting to create a row with columns %v, actual colmns are %v", r.cols, columns)
 	}
 }

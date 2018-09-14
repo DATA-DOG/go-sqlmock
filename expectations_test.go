@@ -9,7 +9,7 @@ import (
 )
 
 func TestQueryExpectationArgComparison(t *testing.T) {
-	e := &queryBasedExpectation{}
+	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
 	against := []namedValue{{Value: int64(5), Ordinal: 1}}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
@@ -67,7 +67,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	var e *queryBasedExpectation
 
-	e = &queryBasedExpectation{args: []driver.Value{true}}
+	e = &queryBasedExpectation{args: []driver.Value{true}, converter: driver.DefaultParameterConverter}
 	against := []namedValue{
 		{Value: true, Ordinal: 1},
 	}
@@ -75,7 +75,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 		t.Error("arguments should match, since arguments are the same")
 	}
 
-	e = &queryBasedExpectation{args: []driver.Value{false}}
+	e = &queryBasedExpectation{args: []driver.Value{false}, converter: driver.DefaultParameterConverter}
 	against = []namedValue{
 		{Value: false, Ordinal: 1},
 	}
@@ -83,7 +83,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 		t.Error("arguments should match, since argument are the same")
 	}
 
-	e = &queryBasedExpectation{args: []driver.Value{true}}
+	e = &queryBasedExpectation{args: []driver.Value{true}, converter: driver.DefaultParameterConverter}
 	against = []namedValue{
 		{Value: false, Ordinal: 1},
 	}
@@ -91,7 +91,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 		t.Error("arguments should not match, since argument is different")
 	}
 
-	e = &queryBasedExpectation{args: []driver.Value{false}}
+	e = &queryBasedExpectation{args: []driver.Value{false}, converter: driver.DefaultParameterConverter}
 	against = []namedValue{
 		{Value: true, Ordinal: 1},
 	}

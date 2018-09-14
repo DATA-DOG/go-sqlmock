@@ -49,7 +49,7 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 		}
 
 		// convert to driver converter
-		darg, err := driver.DefaultParameterConverter.ConvertValue(dval)
+		darg, err := e.converter.ConvertValue(dval)
 		if err != nil {
 			return fmt.Errorf("could not convert %d argument %T - %+v to driver value: %s", k, e.args[k], e.args[k], err)
 		}

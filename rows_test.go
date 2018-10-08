@@ -43,7 +43,7 @@ func ExampleRows_rowError() {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id", "title"}).
+	rows, _ := NewRows([]string{"id", "title"}).
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("row error"))
@@ -128,7 +128,7 @@ func TestAllowsToSetRowsErrors(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id", "title"}).
+	rows, _ := NewRows([]string{"id", "title"}).
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("error"))

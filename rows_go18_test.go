@@ -16,7 +16,7 @@ func TestQueryMultiRows(t *testing.T) {
 	defer db.Close()
 
 	rs1 := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
-	rs2 := NewRows([]string{"name"}).AddRow("gopher").AddRow("john").AddRow("jane").RowError(2, fmt.Errorf("error"))
+	rs2,_ := NewRows([]string{"name"}).AddRow("gopher").AddRow("john").AddRow("jane").RowError(2, fmt.Errorf("error"))
 
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = \\?;SELECT name FROM users").
 		WithArgs(5).

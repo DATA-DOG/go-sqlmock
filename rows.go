@@ -116,9 +116,11 @@ func (r *Rows) CloseError(err error) *Rows {
 // RowError allows to set an error
 // which will be returned when a given
 // row number is read
-func (r *Rows) RowError(row int, err error) *Rows {
+// To mock the error during the scan operation
+// an error also returned along with the row pointer
+func (r *Rows) RowError(row int, err error) (*Rows, error) {
 	r.nextErr[row] = err
-	return r
+	return r, err
 }
 
 // AddRow composed from database driver.Value slice

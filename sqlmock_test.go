@@ -638,9 +638,9 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
-		"one":   []interface{}{"one"},
-		"two":   []interface{}{"one", "two"},
-		"three": []interface{}{"one", "two", "three"},
+		"one":   {"one"},
+		"two":   {"one", "two"},
+		"three": {"one", "two", "three"},
 	}
 
 	wg.Add(len(queries))
@@ -678,9 +678,9 @@ func ExampleSqlmock_goroutines() {
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
-		"one":   []interface{}{"one"},
-		"two":   []interface{}{"one", "two"},
-		"three": []interface{}{"one", "two", "three"},
+		"one":   {"one"},
+		"two":   {"one", "two"},
+		"three": {"one", "two", "three"},
 	}
 
 	wg.Add(len(queries))

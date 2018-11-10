@@ -1167,3 +1167,94 @@ func TestNewRows(t *testing.T) {
 		t.Errorf("expecting to create a row with columns %v, actual colmns are %v", r.cols, columns)
 	}
 }
+
+func TestAnyNumberOfTimesQuery(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+
+	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WithArgs(5).
+		WillReturnRows(rs).
+		AnyNumberOfTimes()
+
+	_, err = db.Query("SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	rows, err := db.Query("SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Error("Unexpected error while trying to close rows")
+		}
+	}()
+
+	if !rows.Next() {
+		t.Error("it must have had one row as result, but got empty result set instead")
+	}
+
+	var id int
+	var title string
+
+	err = rows.Scan(&id, &title)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 5 {
+		t.Errorf("expected mocked id to be 5, but got %d instead", id)
+	}
+
+	if title != "hello world" {
+		t.Errorf("expected mocked title to be 'hello world', but got '%s' instead", title)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestAnyNumberOfTimesExec(t *testing.T) {
+	t.Parallel()
+	db, dbmock, _ := New()
+	dbmock.ExpectExec("THE FIRST EXEC").
+		AnyNumberOfTimes().
+		WillReturnResult(NewResult(0, 0))
+	dbmock.ExpectExec("THE SECOND EXEC").WillReturnResult(NewResult(0, 0))
+
+	_, err := db.Exec("THE FIRST EXEC")
+	if err != nil {
+		t.Fatalf("first exec failed the first time: %v", err)
+	}
+	_, err = db.Exec("THE FIRST EXEC")
+	if err != nil {
+		t.Fatalf("first exec failed the second time: %v", err)
+	}
+	_, err = db.Exec("THE SECOND EXEC")
+	if err != nil {
+		t.Fatalf("second exec failed the first time: %v", err)
+	}
+	_, err = db.Exec("THE SECOND EXEC")
+	if err == nil {
+		t.Fatalf("second exec did not fail the second time")
+	}
+	_, err = db.Exec("THE FIRST EXEC")
+	if err != nil {
+		t.Fatalf("first exec failed the third time: %v", err)
+	}
+
+	err = dbmock.ExpectationsWereMet()
+	if err != nil {
+		t.Fatalf("all expectations should be met: %s", err)
+	}
+}

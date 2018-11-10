@@ -12,6 +12,8 @@ import (
 // an expectation interface
 type expectation interface {
 	fulfilled() bool
+	canMatch() bool
+	isRepeatable() bool
 	Lock()
 	Unlock()
 	String() string
@@ -21,12 +23,21 @@ type expectation interface {
 // satisfies the expectation interface
 type commonExpectation struct {
 	sync.Mutex
-	triggered bool
-	err       error
+	triggered  bool
+	repeatable bool
+	err        error
 }
 
 func (e *commonExpectation) fulfilled() bool {
 	return e.triggered
+}
+
+func (e *commonExpectation) isRepeatable() bool {
+	return e.repeatable
+}
+
+func (e *commonExpectation) canMatch() bool {
+	return e.repeatable || !e.fulfilled()
 }
 
 // ExpectedClose is used to manage *sql.DB.Close expectation
@@ -91,6 +102,12 @@ func (e *ExpectedCommit) WillReturnError(err error) *ExpectedCommit {
 	return e
 }
 
+// AnyNumberOfTimes allows the expectation to match any number of times.
+func (e *ExpectedCommit) AnyNumberOfTimes() *ExpectedCommit {
+	e.repeatable = true
+	return e
+}
+
 // String returns string representation
 func (e *ExpectedCommit) String() string {
 	msg := "ExpectedCommit => expecting transaction Commit"
@@ -109,6 +126,12 @@ type ExpectedRollback struct {
 // WillReturnError allows to set an error for *sql.Tx.Rollback action
 func (e *ExpectedRollback) WillReturnError(err error) *ExpectedRollback {
 	e.err = err
+	return e
+}
+
+// AnyNumberOfTimes allows the expectation to match any number of times.
+func (e *ExpectedRollback) AnyNumberOfTimes() *ExpectedRollback {
+	e.repeatable = true
 	return e
 }
 
@@ -148,6 +171,12 @@ func (e *ExpectedQuery) WillReturnError(err error) *ExpectedQuery {
 // result. May be used together with Context
 func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
 	e.delay = duration
+	return e
+}
+
+// AnyNumberOfTimes allows the expectation to match any number of times.
+func (e *ExpectedQuery) AnyNumberOfTimes() *ExpectedQuery {
+	e.repeatable = true
 	return e
 }
 
@@ -203,6 +232,12 @@ func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
 // result. May be used together with Context
 func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 	e.delay = duration
+	return e
+}
+
+// AnyNumberOfTimes allows the expectation to match any number of times.
+func (e *ExpectedExec) AnyNumberOfTimes() *ExpectedExec {
+	e.repeatable = true
 	return e
 }
 
@@ -305,6 +340,12 @@ func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 	eq.converter = e.mock.converter
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
+}
+
+// AnyNumberOfTimes allows the expectation to match any number of times.
+func (e *ExpectedPrepare) AnyNumberOfTimes() *ExpectedPrepare {
+	e.repeatable = true
+	return e
 }
 
 // String returns string representation

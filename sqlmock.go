@@ -135,10 +135,21 @@ func (c *sqlmock) Close() error {
 	var ok bool
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			_, ok := next.(*ExpectedClose)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedClose); ok {
@@ -199,10 +210,21 @@ func (c *sqlmock) begin() (*ExpectedBegin, error) {
 	var fulfilled int
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			_, ok := next.(*ExpectedBegin)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedBegin); ok {
@@ -262,10 +284,26 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	var ok bool
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			exec, ok := next.(*ExpectedExec)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
+			if exec.attemptMatch(query, args) != nil {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -343,10 +381,26 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			pr, ok := next.(*ExpectedPrepare)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
+			if !pr.sqlRegex.MatchString(query) {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -424,10 +478,26 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	var ok bool
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			qr, ok := next.(*ExpectedQuery)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
+			if qr.attemptMatch(query, args) != nil {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if c.ordered {
@@ -503,10 +573,21 @@ func (c *sqlmock) Commit() error {
 	var ok bool
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			_, ok := next.(*ExpectedCommit)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedCommit); ok {
@@ -538,10 +619,21 @@ func (c *sqlmock) Rollback() error {
 	var ok bool
 	for _, next := range c.expected {
 		next.Lock()
-		if next.fulfilled() {
+		if !next.canMatch() {
 			next.Unlock()
 			fulfilled++
 			continue
+		}
+
+		// Check if this is a repeatable exectation that we might be done with.
+		if next.isRepeatable() && next.fulfilled() {
+			// Repeatable and activated at least once. If it doesn't match, just keep going.
+			_, ok := next.(*ExpectedRollback)
+			if c.ordered && !ok {
+				next.Unlock()
+				fulfilled++
+				continue
+			}
 		}
 
 		if expected, ok = next.(*ExpectedRollback); ok {

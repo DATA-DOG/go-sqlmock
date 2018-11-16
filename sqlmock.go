@@ -542,6 +542,7 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	if expected.rows == nil {
 		return nil, fmt.Errorf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
+	expected.rows.(*rowSets).reset()
 	return expected, nil
 }
 

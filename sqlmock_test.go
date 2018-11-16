@@ -1258,3 +1258,76 @@ func TestAnyNumberOfTimesExec(t *testing.T) {
 		t.Fatalf("all expectations should be met: %s", err)
 	}
 }
+
+func TestAnyNumberOfTimesRows(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+
+	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WithArgs(5).
+		WillReturnRows(rs).
+		AnyNumberOfTimes()
+
+	rows, err := db.Query("SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	defer func() {
+		if er := rows.Close(); er != nil {
+			t.Errorf("Unexpected error while trying to close rows")
+		}
+	}()
+
+	if !rows.Next() {
+		t.Errorf("it must have had one row as result, but got empty result set instead: %v", rows.Err())
+	}
+
+	var id int
+	var title string
+
+	err = rows.Scan(&id, &title)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 5 {
+		t.Errorf("expected mocked id to be 5, but got %d instead", id)
+	}
+
+	if title != "hello world" {
+		t.Errorf("expected mocked title to be 'hello world', but got '%s' instead", title)
+	}
+
+	rows, err = db.Query("SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while retrieving mock rows", err)
+	}
+
+	if !rows.Next() {
+		t.Errorf("it must have had one row as result, but got empty result set instead: %v", rows.Err())
+	}
+
+	err = rows.Scan(&id, &title)
+	if err != nil {
+		t.Errorf("error '%s' was not expected while trying to scan row", err)
+	}
+
+	if id != 5 {
+		t.Errorf("expected mocked id to be 5, but got %d instead", id)
+	}
+
+	if title != "hello world" {
+		t.Errorf("expected mocked title to be 'hello world', but got '%s' instead", title)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}

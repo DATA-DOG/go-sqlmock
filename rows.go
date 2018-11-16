@@ -78,6 +78,13 @@ func (rs *rowSets) empty() bool {
 	return true
 }
 
+func (rs *rowSets) reset() {
+	for _, r := range rs.sets {
+		r.pos = 0
+	}
+	rs.pos = 0
+}
+
 // Rows is a mocked collection of rows to
 // return for Query result
 type Rows struct {

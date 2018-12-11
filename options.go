@@ -10,3 +10,13 @@ func ValueConverterOption(converter driver.ValueConverter) func(*sqlmock) error 
 		return nil
 	}
 }
+
+// QueryMatcherOption allows to customize SQL query matcher
+// and match SQL query strings in more sophisticated ways.
+// The default QueryMatcher is QueryMatcherRegexp.
+func QueryMatcherOption(queryMatcher QueryMatcher) func(*sqlmock) error {
+	return func(s *sqlmock) error {
+		s.queryMatcher = queryMatcher
+		return nil
+	}
+}

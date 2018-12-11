@@ -81,11 +81,12 @@ type Sqlmock interface {
 }
 
 type sqlmock struct {
-	ordered   bool
-	dsn       string
-	opened    int
-	drv       *mockDriver
-	converter driver.ValueConverter
+	ordered      bool
+	dsn          string
+	opened       int
+	drv          *mockDriver
+	converter    driver.ValueConverter
+	queryMatcher QueryMatcher
 
 	expected []expectation
 }
@@ -103,6 +104,9 @@ func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error)
 	}
 	if c.converter == nil {
 		c.converter = driver.DefaultParameterConverter
+	}
+	if c.queryMatcher == nil {
+		c.queryMatcher = QueryMatcherRegexp
 	}
 	return db, c, db.Ping()
 }

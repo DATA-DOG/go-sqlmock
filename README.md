@@ -213,6 +213,7 @@ It only asserts that argument is of `time.Time` type.
 
 ## Change Log
 
+- **2018-12-11** - added expectation of Rows to be closed, while mocking expected query.
 - **2018-12-11** - introduced an option to provide **QueryMatcher** in order to customize SQL query matching.
 - **2017-09-01** - it is now possible to expect that prepared statement will be closed,
   using **ExpectedPrepare.WillBeClosed**.

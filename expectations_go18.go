@@ -16,7 +16,7 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 	for i, r := range rows {
 		sets[i] = r
 	}
-	e.rows = &rowSets{sets: sets}
+	e.rows = &rowSets{sets: sets, ex: e}
 	return e
 }
 

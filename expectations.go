@@ -125,8 +125,10 @@ func (e *ExpectedRollback) String() string {
 // Returned by *Sqlmock.ExpectQuery.
 type ExpectedQuery struct {
 	queryBasedExpectation
-	rows  driver.Rows
-	delay time.Duration
+	rows             driver.Rows
+	delay            time.Duration
+	rowsMustBeClosed bool
+	rowsWereClosed   bool
 }
 
 // WithArgs will match given expected args to actual database query arguments.
@@ -134,6 +136,12 @@ type ExpectedQuery struct {
 // arguments an sqlmock.Argument interface can be used to match an argument.
 func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
 	e.args = args
+	return e
+}
+
+// RowsWillBeClosed expects this query rows to be closed.
+func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
+	e.rowsMustBeClosed = true
 	return e
 }
 

@@ -22,6 +22,7 @@ var CSVColumnParser = func(s string) []byte {
 type rowSets struct {
 	sets []*Rows
 	pos  int
+	ex   *ExpectedQuery
 }
 
 func (rs *rowSets) Columns() []string {
@@ -29,6 +30,7 @@ func (rs *rowSets) Columns() []string {
 }
 
 func (rs *rowSets) Close() error {
+	rs.ex.rowsWereClosed = true
 	return rs.sets[rs.pos].closeErr
 }
 

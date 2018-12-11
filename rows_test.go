@@ -88,6 +88,29 @@ func ExampleRows_closeError() {
 	// Output: got error: close error
 }
 
+func ExampleRows_expectToBeClosed() {
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("failed to open sqlmock database:", err)
+	}
+	defer db.Close()
+
+	rows := NewRows([]string{"id", "title"}).AddRow(1, "john")
+	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+
+	db.Query("SELECT")
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		fmt.Println("got error:", err)
+	}
+
+	// Output: got error: expected query rows to be closed, but it was not: ExpectedQuery => expecting Query, QueryContext or QueryRow which:
+	//   - matches sql: 'SELECT'
+	//   - is without arguments
+	//   - should return rows:
+	//     row 0 - [1 john]
+}
+
 func ExampleRows_customDriverValue() {
 	db, mock, err := New()
 	if err != nil {
@@ -177,6 +200,31 @@ func TestRowsCloseError(t *testing.T) {
 
 	if err := rs.Close(); err == nil {
 		t.Fatal("expected a close error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRowsClosed(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rows := NewRows([]string{"id"}).AddRow(1)
+	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+
+	rs, err := db.Query("SELECT")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if err := rs.Close(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

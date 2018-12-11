@@ -14,7 +14,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"regexp"
 	"time"
 )
 
@@ -32,22 +31,19 @@ type Sqlmock interface {
 	// were met in order. If any of them was not met - an error is returned.
 	ExpectationsWereMet() error
 
-	// ExpectPrepare expects Prepare() to be called with sql query
-	// which match sqlRegexStr given regexp.
+	// ExpectPrepare expects Prepare() to be called with expectedSQL query.
 	// the *ExpectedPrepare allows to mock database response.
 	// Note that you may expect Query() or Exec() on the *ExpectedPrepare
-	// statement to prevent repeating sqlRegexStr
-	ExpectPrepare(sqlRegexStr string) *ExpectedPrepare
+	// statement to prevent repeating expectedSQL
+	ExpectPrepare(expectedSQL string) *ExpectedPrepare
 
-	// ExpectQuery expects Query() or QueryRow() to be called with sql query
-	// which match sqlRegexStr given regexp.
+	// ExpectQuery expects Query() or QueryRow() to be called with expectedSQL query.
 	// the *ExpectedQuery allows to mock database response.
-	ExpectQuery(sqlRegexStr string) *ExpectedQuery
+	ExpectQuery(expectedSQL string) *ExpectedQuery
 
-	// ExpectExec expects Exec() to be called with sql query
-	// which match sqlRegexStr given regexp.
+	// ExpectExec expects Exec() to be called with expectedSQL query.
 	// the *ExpectedExec allows to mock database response
-	ExpectExec(sqlRegexStr string) *ExpectedExec
+	ExpectExec(expectedSQL string) *ExpectedExec
 
 	// ExpectBegin expects *sql.DB.Begin to be called.
 	// the *ExpectedBegin allows to mock database response
@@ -260,7 +256,6 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error)
 }
 
 func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
-	query = stripQuery(query)
 	var expected *ExpectedExec
 	var fulfilled int
 	var ok bool
@@ -280,7 +275,12 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 			return nil, fmt.Errorf("call to ExecQuery '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
 		if exec, ok := next.(*ExpectedExec); ok {
-			if err := exec.attemptMatch(query, args); err == nil {
+			if err := c.queryMatcher.Match(exec.expectSQL, query); err != nil {
+				next.Unlock()
+				continue
+			}
+
+			if err := exec.attemptArgMatch(args); err == nil {
 				expected = exec
 				break
 			}
@@ -296,8 +296,8 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	}
 	defer expected.Unlock()
 
-	if !expected.queryMatches(query) {
-		return nil, fmt.Errorf("ExecQuery '%s', does not match regex '%s'", query, expected.sqlRegex.String())
+	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		return nil, fmt.Errorf("ExecQuery: %v", err)
 	}
 
 	if err := expected.argsMatches(args); err != nil {
@@ -316,10 +316,9 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	return expected, nil
 }
 
-func (c *sqlmock) ExpectExec(sqlRegexStr string) *ExpectedExec {
+func (c *sqlmock) ExpectExec(expectedSQL string) *ExpectedExec {
 	e := &ExpectedExec{}
-	sqlRegexStr = stripQuery(sqlRegexStr)
-	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
+	e.expectSQL = expectedSQL
 	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
@@ -343,8 +342,6 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	var fulfilled int
 	var ok bool
 
-	query = stripQuery(query)
-
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -363,7 +360,7 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 		}
 
 		if pr, ok := next.(*ExpectedPrepare); ok {
-			if pr.sqlRegex.MatchString(query) {
+			if err := c.queryMatcher.Match(pr.expectSQL, query); err == nil {
 				expected = pr
 				break
 			}
@@ -379,17 +376,16 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 		return nil, fmt.Errorf(msg, query)
 	}
 	defer expected.Unlock()
-	if !expected.sqlRegex.MatchString(query) {
-		return nil, fmt.Errorf("Prepare query string '%s', does not match regex [%s]", query, expected.sqlRegex.String())
+	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		return nil, fmt.Errorf("Prepare: %v", err)
 	}
 
 	expected.triggered = true
 	return expected, expected.err
 }
 
-func (c *sqlmock) ExpectPrepare(sqlRegexStr string) *ExpectedPrepare {
-	sqlRegexStr = stripQuery(sqlRegexStr)
-	e := &ExpectedPrepare{sqlRegex: regexp.MustCompile(sqlRegexStr), mock: c}
+func (c *sqlmock) ExpectPrepare(expectedSQL string) *ExpectedPrepare {
+	e := &ExpectedPrepare{expectSQL: expectedSQL, mock: c}
 	c.expected = append(c.expected, e)
 	return e
 }
@@ -422,7 +418,6 @@ func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) 
 }
 
 func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error) {
-	query = stripQuery(query)
 	var expected *ExpectedQuery
 	var fulfilled int
 	var ok bool
@@ -442,7 +437,11 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 			return nil, fmt.Errorf("call to Query '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
 		if qr, ok := next.(*ExpectedQuery); ok {
-			if err := qr.attemptMatch(query, args); err == nil {
+			if err := c.queryMatcher.Match(qr.expectSQL, query); err != nil {
+				next.Unlock()
+				continue
+			}
+			if err := qr.attemptArgMatch(args); err == nil {
 				expected = qr
 				break
 			}
@@ -460,8 +459,8 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 
 	defer expected.Unlock()
 
-	if !expected.queryMatches(query) {
-		return nil, fmt.Errorf("Query '%s', does not match regex [%s]", query, expected.sqlRegex.String())
+	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		return nil, fmt.Errorf("Query: %v", err)
 	}
 
 	if err := expected.argsMatches(args); err != nil {
@@ -479,10 +478,9 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	return expected, nil
 }
 
-func (c *sqlmock) ExpectQuery(sqlRegexStr string) *ExpectedQuery {
+func (c *sqlmock) ExpectQuery(expectedSQL string) *ExpectedQuery {
 	e := &ExpectedQuery{}
-	sqlRegexStr = stripQuery(sqlRegexStr)
-	e.sqlRegex = regexp.MustCompile(sqlRegexStr)
+	e.expectSQL = expectedSQL
 	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e

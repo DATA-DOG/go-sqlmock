@@ -145,6 +145,28 @@ func TestShouldRollbackStatUpdatesOnFailure(t *testing.T) {
 }
 ```
 
+## Customize SQL query matching
+
+There were plenty of requests from users regarding SQL query string validation or different matching option.
+We have now implemented the `QueryMatcher` interface, which can be passed through an option when calling
+`sqlmock.New` or `sqlmock.NewWithDSN`.
+
+This now allows to include some library, which would allow for example to parse and validate `mysql` SQL AST.
+And create a custom QueryMatcher in order to validate SQL in sophisticated ways.
+
+By default, **sqlmock** is preserving backward compatibility and default query matcher is `sqlmock.QueryMatcherRegexp`
+which uses expected SQL string as a regular expression to match incoming query string. There is an equality matcher:
+`QueryMatcherEqual` which will do a full case sensitive match.
+
+In order to customize the QueryMatcher, use the following:
+
+``` go
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+```
+
+The query matcher can be fully customized based on user needs. **sqlmock** will not
+provide a standard sql parsing matchers, since various drivers may not follow the same SQL standard.
+
 ## Matching arguments like time.Time
 
 There may be arguments which are of `struct` type and cannot be compared easily by value like `time.Time`. In this case
@@ -191,6 +213,7 @@ It only asserts that argument is of `time.Time` type.
 
 ## Change Log
 
+- **2018-12-11** - introduced an option to provide **QueryMatcher** in order to customize SQL query matching.
 - **2017-09-01** - it is now possible to expect that prepared statement will be closed,
   using **ExpectedPrepare.WillBeClosed**.
 - **2017-02-09** - implemented support for **go1.8** features. **Rows** interface was changed to struct

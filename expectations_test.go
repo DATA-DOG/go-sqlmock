@@ -3,7 +3,6 @@ package sqlmock
 import (
 	"database/sql/driver"
 	"fmt"
-	"regexp"
 	"testing"
 	"time"
 )
@@ -97,20 +96,6 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	}
 	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since argument is different")
-	}
-}
-
-func TestQueryExpectationSqlMatch(t *testing.T) {
-	e := &ExpectedExec{}
-
-	e.sqlRegex = regexp.MustCompile("SELECT x FROM")
-	if !e.queryMatches("SELECT x FROM someting") {
-		t.Errorf("Sql must have matched the query")
-	}
-
-	e.sqlRegex = regexp.MustCompile("SELECT COUNT\\(x\\) FROM")
-	if !e.queryMatches("SELECT COUNT(x) FROM someting") {
-		t.Errorf("Sql must have matched the query")
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// ErrCancelled defines an error value, which can be expected in case of
+// such cancellation error.
 var ErrCancelled = errors.New("canceling query due to user request")
 
 // Implement the "QueryerContext" interface

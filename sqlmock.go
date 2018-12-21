@@ -166,7 +166,11 @@ func (c *sqlmock) Close() error {
 
 func (c *sqlmock) ExpectationsWereMet() error {
 	for _, e := range c.expected {
-		if !e.fulfilled() {
+		e.Lock()
+		fulfilled := e.fulfilled()
+		e.Unlock()
+
+		if !fulfilled {
 			return fmt.Errorf("there is a remaining expectation which was not matched: %s", e)
 		}
 

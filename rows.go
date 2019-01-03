@@ -48,20 +48,27 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	return r.nextErr[r.pos-1]
 }
 
+// ColumnTypeLength is defined from driver.RowColumnTypeLength
 func (rs *rowSets) ColumnTypeLength(index int) (length int64, ok bool) {
 	return rs.sets[0].def[index].length, false
 }
 
+// ColumnTypeNullable is defined from driver.RowColumnTypeNullable
 func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool){
 	return rs.sets[0].def[index].nullable, false
 }
+
+// ColumnTypePrecisionScale is defined from driver.RowColumnTypePrecisionScale
 func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool){
 	return rs.sets[0].def[index].precision, rs.sets[0].def[index].scale,false
 }
+
+// ColumnTypeScanType is defined from driver.RowsColumnTypeScanType
 func (rs *rowSets) ColumnTypeScanType(index int) reflect.Type {
 	return rs.sets[0].def[index].scanType
 }
 
+// ColumnTypeDatabaseTypeName is defined RowsColumnTypeDatabaseTypeName
 func (rs *rowSets) ColumnTypeDatabaseTypeName(index int) string {
 	return rs.sets[0].def[index].dbTyp
 }

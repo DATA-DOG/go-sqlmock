@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"reflect"
 )
 
 // CSVColumnParser is a function which converts trimmed csv
@@ -47,6 +48,24 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	return r.nextErr[r.pos-1]
 }
 
+func (rs *rowSets) ColumnTypeLength(index int) (length int64, ok bool) {
+	return rs.sets[0].def[index].length, false
+}
+
+func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool){
+	return rs.sets[0].def[index].nullable, false
+}
+func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool){
+	return rs.sets[0].def[index].precision, rs.sets[0].def[index].scale,false
+}
+func (rs *rowSets) ColumnTypeScanType(index int) reflect.Type {
+	return rs.sets[0].def[index].scanType
+}
+
+func (rs *rowSets) ColumnTypeDatabaseTypeName(index int) string {
+	return rs.sets[0].def[index].dbTyp
+}
+
 // transforms to debuggable printable string
 func (rs *rowSets) String() string {
 	if rs.empty() {
@@ -78,21 +97,37 @@ func (rs *rowSets) empty() bool {
 	return true
 }
 
+type Column struct {
+	name, dbTyp string
+	nullable bool
+	length, precision, scale int64
+	scanType reflect.Type
+}
+
 // Rows is a mocked collection of rows to
 // return for Query result
 type Rows struct {
 	cols     []string
+	def      []*Column
 	rows     [][]driver.Value
 	pos      int
 	nextErr  map[int]error
 	closeErr error
 }
 
+func NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, length, precision, scale int64) *Column {
+	return &Column{name, dbTyp, nullable, length, precision, scale, reflect.TypeOf(exampleValue)}
+}
+
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows
-func NewRows(columns []string) *Rows {
-	return &Rows{cols: columns, nextErr: make(map[int]error)}
+func NewRows(columns ...*Column) *Rows {
+	cols := make([]string, len(columns))
+	for i, column := range columns {
+		cols[i] = column.name
+	}
+	return &Rows{cols: cols, def: columns, nextErr: make(map[int]error)}
 }
 
 // CloseError allows to set an error

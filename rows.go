@@ -97,6 +97,7 @@ func (rs *rowSets) empty() bool {
 	return true
 }
 
+// Column is a mocked column Metadate for rows.ColumnTypes()
 type Column struct {
 	name, dbTyp string
 	nullable bool
@@ -115,6 +116,7 @@ type Rows struct {
 	closeErr error
 }
 
+// New Column allows to create a Column Metadata definition
 func NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, length, precision, scale int64) *Column {
 	return &Column{name, dbTyp, nullable, length, precision, scale, reflect.TypeOf(exampleValue)}
 }

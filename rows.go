@@ -5,8 +5,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"strings"
 	"reflect"
+	"strings"
 )
 
 // CSVColumnParser is a function which converts trimmed csv

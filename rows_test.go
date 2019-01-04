@@ -13,7 +13,7 @@ func ExampleRows() {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id","title"}).
+	rows := NewRows([]string{"id", "title"}).
 		AddRow(1, "one").
 		AddRow(2, "two")
 
@@ -43,7 +43,7 @@ func ExampleRows_rowError() {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id","title"}).
+	rows := NewRows([]string{"id", "title"}).
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("row error"))
@@ -73,7 +73,7 @@ func ExampleRows_closeError() {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id","title"}).CloseError(fmt.Errorf("close error"))
+	rows := NewRows([]string{"id", "title"}).CloseError(fmt.Errorf("close error"))
 
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
@@ -152,7 +152,7 @@ func TestAllowsToSetRowsErrors(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows := NewRows([]string{"id","title"}).
+	rows := NewRows([]string{"id", "title"}).
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("error"))
@@ -269,7 +269,7 @@ func TestRowsScanError(t *testing.T) {
 	}
 	defer db.Close()
 
-	r := NewRows([]string{"col1","col2"}).AddRow("one", "two").AddRow("one", nil)
+	r := NewRows([]string{"col1", "col2"}).AddRow("one", "two").AddRow("one", nil)
 	mock.ExpectQuery("SELECT").WillReturnRows(r)
 
 	rs, err := db.Query("SELECT")
@@ -299,7 +299,7 @@ func TestRowsScanError(t *testing.T) {
 
 func TestCSVRowParser(t *testing.T) {
 	t.Parallel()
-	rs := NewRows([]string{"col1","col2"}).FromCSVString("a,NULL")
+	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
 	db, mock, err := New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

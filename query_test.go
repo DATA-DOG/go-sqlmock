@@ -14,7 +14,6 @@ func ExampleQueryMatcher() {
 	}
 	defer db.Close()
 
-
 	rows := NewRows([]string{"id", "title"}).
 		AddRow(1, "one").
 		AddRow(2, "two")

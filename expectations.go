@@ -3,7 +3,6 @@ package sqlmock
 import (
 	"database/sql/driver"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -126,8 +125,10 @@ func (e *ExpectedRollback) String() string {
 // Returned by *Sqlmock.ExpectQuery.
 type ExpectedQuery struct {
 	queryBasedExpectation
-	rows  driver.Rows
-	delay time.Duration
+	rows             driver.Rows
+	delay            time.Duration
+	rowsMustBeClosed bool
+	rowsWereClosed   bool
 }
 
 // WithArgs will match given expected args to actual database query arguments.
@@ -135,6 +136,12 @@ type ExpectedQuery struct {
 // arguments an sqlmock.Argument interface can be used to match an argument.
 func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
 	e.args = args
+	return e
+}
+
+// RowsWillBeClosed expects this query rows to be closed.
+func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
+	e.rowsMustBeClosed = true
 	return e
 }
 
@@ -154,7 +161,7 @@ func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
 // String returns string representation
 func (e *ExpectedQuery) String() string {
 	msg := "ExpectedQuery => expecting Query, QueryContext or QueryRow which:"
-	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+	msg += "\n  - matches sql: '" + e.expectSQL + "'"
 
 	if len(e.args) == 0 {
 		msg += "\n  - is without arguments"
@@ -209,7 +216,7 @@ func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 // String returns string representation
 func (e *ExpectedExec) String() string {
 	msg := "ExpectedExec => expecting Exec or ExecContext which:"
-	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+	msg += "\n  - matches sql: '" + e.expectSQL + "'"
 
 	if len(e.args) == 0 {
 		msg += "\n  - is without arguments"
@@ -253,7 +260,7 @@ func (e *ExpectedExec) WillReturnResult(result driver.Result) *ExpectedExec {
 type ExpectedPrepare struct {
 	commonExpectation
 	mock         *sqlmock
-	sqlRegex     *regexp.Regexp
+	expectSQL    string
 	statement    driver.Stmt
 	closeErr     error
 	mustBeClosed bool
@@ -291,7 +298,8 @@ func (e *ExpectedPrepare) WillBeClosed() *ExpectedPrepare {
 // this method is convenient in order to prevent duplicating sql query string matching.
 func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 	eq := &ExpectedQuery{}
-	eq.sqlRegex = e.sqlRegex
+	eq.expectSQL = e.expectSQL
+	eq.converter = e.mock.converter
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
 }
@@ -300,7 +308,8 @@ func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 // this method is convenient in order to prevent duplicating sql query string matching.
 func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 	eq := &ExpectedExec{}
-	eq.sqlRegex = e.sqlRegex
+	eq.expectSQL = e.expectSQL
+	eq.converter = e.mock.converter
 	e.mock.expected = append(e.mock.expected, eq)
 	return eq
 }
@@ -308,7 +317,7 @@ func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 // String returns string representation
 func (e *ExpectedPrepare) String() string {
 	msg := "ExpectedPrepare => expecting Prepare statement which:"
-	msg += "\n  - matches sql: '" + e.sqlRegex.String() + "'"
+	msg += "\n  - matches sql: '" + e.expectSQL + "'"
 
 	if e.err != nil {
 		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
@@ -325,15 +334,12 @@ func (e *ExpectedPrepare) String() string {
 // adds a query matching logic
 type queryBasedExpectation struct {
 	commonExpectation
-	sqlRegex *regexp.Regexp
-	args     []driver.Value
+	expectSQL string
+	converter driver.ValueConverter
+	args      []driver.Value
 }
 
-func (e *queryBasedExpectation) attemptMatch(sql string, args []namedValue) (err error) {
-	if !e.queryMatches(sql) {
-		return fmt.Errorf(`could not match sql: "%s" with expected regexp "%s"`, sql, e.sqlRegex.String())
-	}
-
+func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
 	// catch panic
 	defer func() {
 		if e := recover(); e != nil {
@@ -346,8 +352,4 @@ func (e *queryBasedExpectation) attemptMatch(sql string, args []namedValue) (err
 
 	err = e.argsMatches(args)
 	return
-}
-
-func (e *queryBasedExpectation) queryMatches(sql string) bool {
-	return e.sqlRegex.MatchString(sql)
 }

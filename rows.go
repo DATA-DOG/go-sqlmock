@@ -23,6 +23,7 @@ var CSVColumnParser = func(s string) []byte {
 type rowSets struct {
 	sets []*Rows
 	pos  int
+	ex   *ExpectedQuery
 }
 
 func (rs *rowSets) Columns() []string {
@@ -30,6 +31,7 @@ func (rs *rowSets) Columns() []string {
 }
 
 func (rs *rowSets) Close() error {
+	rs.ex.rowsWereClosed = true
 	return rs.sets[rs.pos].closeErr
 }
 
@@ -115,12 +117,13 @@ type Column struct {
 // Rows is a mocked collection of rows to
 // return for Query result
 type Rows struct {
-	cols     []string
-	def      []*Column
-	rows     [][]driver.Value
-	pos      int
-	nextErr  map[int]error
-	closeErr error
+	converter driver.ValueConverter
+	cols      []string
+  def      []*Column
+	rows      [][]driver.Value
+	pos       int
+	nextErr   map[int]error
+	closeErr  error
 }
 
 // New Column allows to create a Column Metadata definition
@@ -130,13 +133,19 @@ func NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, leng
 
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
-// to be used as sql driver.Rows
+// to be used as sql driver.Rows.
+// Use Sqlmock.NewRows instead if using a custom converter
 func NewRows(columns ...*Column) *Rows {
-	cols := make([]string, len(columns))
+  cols := make([]string, len(columns))
 	for i, column := range columns {
 		cols[i] = column.name
+  }
+  
+	return &Rows{
+		cols:      cols,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
 	}
-	return &Rows{cols: cols, def: columns, nextErr: make(map[int]error)}
 }
 
 // CloseError allows to set an error
@@ -170,6 +179,17 @@ func (r *Rows) AddRow(values ...driver.Value) *Rows {
 
 	row := make([]driver.Value, len(r.cols))
 	for i, v := range values {
+		// Convert user-friendly values (such as int or driver.Valuer)
+		// to database/sql native value (driver.Value such as int64)
+		var err error
+		v, err = r.converter.ConvertValue(v)
+		if err != nil {
+			panic(fmt.Errorf(
+				"row #%d, column #%d (%q) type %T: %s",
+				len(r.rows)+1, i, r.cols[i], values[i], err,
+			))
+		}
+
 		row[i] = v
 	}
 

@@ -2,6 +2,7 @@ package sqlmock
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -70,7 +71,7 @@ func TestIssue14EscapeSQL(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -138,7 +139,7 @@ func TestMockQuery(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -195,7 +196,7 @@ func TestMockQueryTypes(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -244,7 +245,7 @@ func TestTransactionExpectations(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -292,7 +293,7 @@ func TestPrepareExpectations(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -350,7 +351,7 @@ func TestPreparedQueryExecutions(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -504,7 +505,7 @@ func TestExecExpectations(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -596,7 +597,7 @@ func TestRowBuilderAndNilTypes(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -637,9 +638,9 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
-		"one":   []interface{}{"one"},
-		"two":   []interface{}{"one", "two"},
-		"three": []interface{}{"one", "two", "three"},
+		"one":   {"one"},
+		"two":   {"one", "two"},
+		"three": {"one", "two", "three"},
 	}
 
 	wg.Add(len(queries))
@@ -655,7 +656,7 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 	wg.Wait()
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -677,9 +678,9 @@ func ExampleSqlmock_goroutines() {
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
-		"one":   []interface{}{"one"},
-		"two":   []interface{}{"one", "two"},
-		"three": []interface{}{"one", "two", "three"},
+		"one":   {"one"},
+		"two":   {"one", "two"},
+		"three": {"one", "two", "three"},
 	}
 
 	wg.Add(len(queries))
@@ -695,7 +696,7 @@ func ExampleSqlmock_goroutines() {
 	wg.Wait()
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		fmt.Println("there were unfulfilled expections:", err)
+		fmt.Println("there were unfulfilled expectations:", err)
 	}
 	// Output:
 }
@@ -848,6 +849,32 @@ func TestRollbackThrow(t *testing.T) {
 	// Output:
 }
 
+func TestUnexpectedBegin(t *testing.T) {
+	// Open new mock database
+	db, _, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	if _, err := db.Begin(); err == nil {
+		t.Error("an error was expected when calling begin, but got none")
+	}
+}
+
+func TestUnexpectedExec(t *testing.T) {
+	// Open new mock database
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	mock.ExpectBegin()
+	db.Begin()
+	if _, err := db.Exec("SELECT 1"); err == nil {
+		t.Error("an error was expected when calling exec, but got none")
+	}
+}
+
 func TestUnexpectedCommit(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()
@@ -947,7 +974,7 @@ func TestPrepareExec(t *testing.T) {
 	}
 	tx.Commit()
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -986,7 +1013,7 @@ func TestPrepareQuery(t *testing.T) {
 	}
 	tx.Commit()
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -1002,7 +1029,7 @@ func TestExpectedCloseError(t *testing.T) {
 		t.Error("an error was expected when calling close, but got none")
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -1060,6 +1087,133 @@ func TestPreparedStatementCloseExpectation(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestExecExpectationErrorDelay(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// test that return of error is delayed
+	var delay time.Duration
+	delay = 100 * time.Millisecond
+	mock.ExpectExec("^INSERT INTO articles").
+		WillReturnError(errors.New("slow fail")).
+		WillDelayFor(delay)
+
+	start := time.Now()
+	res, err := db.Exec("INSERT INTO articles (title) VALUES (?)", "hello")
+	stop := time.Now()
+
+	if res != nil {
+		t.Errorf("result was not expected, was expecting nil")
+	}
+
+	if err == nil {
+		t.Errorf("error was expected, was not expecting nil")
+	}
+
+	if err.Error() != "slow fail" {
+		t.Errorf("error '%s' was not expected, was expecting '%s'", err.Error(), "slow fail")
+	}
+
+	elapsed := stop.Sub(start)
+	if elapsed < delay {
+		t.Errorf("expecting a delay of %v before error, actual delay was %v", delay, elapsed)
+	}
+
+	// also test that return of error is not delayed
+	mock.ExpectExec("^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
+
+	start = time.Now()
+	db.Exec("INSERT INTO articles (title) VALUES (?)", "hello")
+	stop = time.Now()
+
+	elapsed = stop.Sub(start)
+	if elapsed > delay {
+		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
+	}
+}
+
+func TestOptionsFail(t *testing.T) {
+	t.Parallel()
+	expected := errors.New("failing option")
+	option := func(*sqlmock) error {
+		return expected
+	}
+	db, _, err := New(option)
+	defer db.Close()
+	if err == nil {
+		t.Errorf("missing expecting error '%s' when opening a stub database connection", expected)
+	}
+}
+
+func TestNewRows(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	columns := []string{"col1", "col2"}
+
+	r := mock.NewRows(columns)
+	if len(r.cols) != len(columns) || r.cols[0] != columns[0] || r.cols[1] != columns[1] {
+		t.Errorf("expecting to create a row with columns %v, actual colmns are %v", r.cols, columns)
+	}
+}
+
+// This is actually a test of ExpectationsWereMet. Without a lock around e.fulfilled() inside
+// ExpectationWereMet, the race detector complains if e.triggered is being read while it is also
+// being written by the query running in another goroutine.
+func TestQueryWithTimeout(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+
+	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WillDelayFor(15 * time.Millisecond). // Query will take longer than timeout
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	_, err = queryWithTimeout(10*time.Millisecond, db, "SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err == nil {
+		t.Errorf("expecting query to time out")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func queryWithTimeout(t time.Duration, db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
+	rowsChan := make(chan *sql.Rows, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		rowsChan <- rows
+	}()
+
+	select {
+	case rows := <-rowsChan:
+		return rows, nil
+	case err := <-errChan:
+		return nil, err
+	case <-time.After(t):
+		return nil, fmt.Errorf("query timed out after %v", t)
 	}
 }

@@ -11,7 +11,7 @@ import (
 // WillReturnRows specifies the set of resulting rows that will be returned
 // by the triggered query
 func (e *ExpectedQuery) WillReturnRows(rows *Rows) *ExpectedQuery {
-	e.rows = &rowSets{sets: []*Rows{rows}}
+	e.rows = &rowSets{sets: []*Rows{rows}, ex: e}
 	return e
 }
 
@@ -35,7 +35,7 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 
 		dval := e.args[k]
 		// convert to driver converter
-		darg, err := driver.DefaultParameterConverter.ConvertValue(dval)
+		darg, err := e.converter.ConvertValue(dval)
 		if err != nil {
 			return fmt.Errorf("could not convert %d argument %T - %+v to driver value: %s", k, e.args[k], e.args[k], err)
 		}

@@ -5,6 +5,7 @@ package sqlmock
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 )
@@ -43,7 +44,7 @@ func TestContextExecCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -87,7 +88,7 @@ func TestPreparedStatementContextExecCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -126,7 +127,7 @@ func TestContextExecWithNamedArg(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -163,7 +164,7 @@ func TestContextExec(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -204,7 +205,7 @@ func TestContextQueryCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -251,7 +252,7 @@ func TestPreparedStatementContextQueryCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -287,7 +288,7 @@ func TestContextQuery(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -323,7 +324,7 @@ func TestContextBeginCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -354,7 +355,7 @@ func TestContextBegin(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -390,7 +391,7 @@ func TestContextPrepareCancel(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -421,6 +422,55 @@ func TestContextPrepare(t *testing.T) {
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expections: %s", err)
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestContextExecErrorDelay(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// test that return of error is delayed
+	var delay time.Duration
+	delay = 100 * time.Millisecond
+	mock.ExpectExec("^INSERT INTO articles").
+		WillReturnError(errors.New("slow fail")).
+		WillDelayFor(delay)
+
+	start := time.Now()
+	res, err := db.ExecContext(context.Background(), "INSERT INTO articles (title) VALUES (?)", "hello")
+	stop := time.Now()
+
+	if res != nil {
+		t.Errorf("result was not expected, was expecting nil")
+	}
+
+	if err == nil {
+		t.Errorf("error was expected, was not expecting nil")
+	}
+
+	if err.Error() != "slow fail" {
+		t.Errorf("error '%s' was not expected, was expecting '%s'", err.Error(), "slow fail")
+	}
+
+	elapsed := stop.Sub(start)
+	if elapsed < delay {
+		t.Errorf("expecting a delay of %v before error, actual delay was %v", delay, elapsed)
+	}
+
+	// also test that return of error is not delayed
+	mock.ExpectExec("^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
+
+	start = time.Now()
+	db.ExecContext(context.Background(), "INSERT INTO articles (title) VALUES (?)", "hello")
+	stop = time.Now()
+
+	elapsed = stop.Sub(start)
+	if elapsed > delay {
+		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
 	}
 }

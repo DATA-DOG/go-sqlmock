@@ -9,7 +9,7 @@ import (
 )
 
 func TestQueryExpectationNamedArgComparison(t *testing.T) {
-	e := &queryBasedExpectation{}
+	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
 	against := []namedValue{{Value: int64(5), Name: "id"}}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// ErrCancelled defines an error value, which can be expected in case of
+// such cancellation error.
 var ErrCancelled = errors.New("canceling query due to user request")
 
 // Implement the "QueryerContext" interface
@@ -19,16 +21,19 @@ func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.
 	}
 
 	ex, err := c.query(query, namedArgs)
-	if err != nil {
-		return nil, err
+	if ex != nil {
+		select {
+		case <-time.After(ex.delay):
+			if err != nil {
+				return nil, err
+			}
+			return ex.rows, nil
+		case <-ctx.Done():
+			return nil, ErrCancelled
+		}
 	}
 
-	select {
-	case <-time.After(ex.delay):
-		return ex.rows, nil
-	case <-ctx.Done():
-		return nil, ErrCancelled
-	}
+	return nil, err
 }
 
 // Implement the "ExecerContext" interface
@@ -39,46 +44,55 @@ func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.N
 	}
 
 	ex, err := c.exec(query, namedArgs)
-	if err != nil {
-		return nil, err
+	if ex != nil {
+		select {
+		case <-time.After(ex.delay):
+			if err != nil {
+				return nil, err
+			}
+			return ex.result, nil
+		case <-ctx.Done():
+			return nil, ErrCancelled
+		}
 	}
 
-	select {
-	case <-time.After(ex.delay):
-		return ex.result, nil
-	case <-ctx.Done():
-		return nil, ErrCancelled
-	}
+	return nil, err
 }
 
 // Implement the "ConnBeginTx" interface
 func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	ex, err := c.begin()
-	if err != nil {
-		return nil, err
+	if ex != nil {
+		select {
+		case <-time.After(ex.delay):
+			if err != nil {
+				return nil, err
+			}
+			return c, nil
+		case <-ctx.Done():
+			return nil, ErrCancelled
+		}
 	}
 
-	select {
-	case <-time.After(ex.delay):
-		return c, nil
-	case <-ctx.Done():
-		return nil, ErrCancelled
-	}
+	return nil, err
 }
 
 // Implement the "ConnPrepareContext" interface
 func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	ex, err := c.prepare(query)
-	if err != nil {
-		return nil, err
+	if ex != nil {
+		select {
+		case <-time.After(ex.delay):
+			if err != nil {
+				return nil, err
+			}
+			return &statement{c, ex, query}, nil
+		case <-ctx.Done():
+			return nil, ErrCancelled
+		}
 	}
 
-	select {
-	case <-time.After(ex.delay):
-		return &statement{c, ex, query}, nil
-	case <-ctx.Done():
-		return nil, ErrCancelled
-	}
+	return nil, err
 }
 
 // Implement the "Pinger" interface
@@ -99,3 +113,9 @@ func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValu
 }
 
 // @TODO maybe add ExpectedBegin.WithOptions(driver.TxOptions)
+
+// CheckNamedValue meets https://golang.org/pkg/database/sql/driver/#NamedValueChecker
+func (c *sqlmock) CheckNamedValue(nv *driver.NamedValue) (err error) {
+	nv.Value, err = c.converter.ConvertValue(nv.Value)
+	return err
+}

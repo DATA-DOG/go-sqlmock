@@ -5,6 +5,7 @@ package sqlmock
 import (
 	"fmt"
 	"testing"
+	"reflect"
 )
 
 func TestQueryMultiRows(t *testing.T) {

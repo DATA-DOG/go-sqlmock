@@ -56,13 +56,13 @@ func (rs *rowSets) ColumnTypeLength(index int) (length int64, ok bool) {
 }
 
 // ColumnTypeNullable is defined from driver.RowColumnTypeNullable
-func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool){
+func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool) {
 	return rs.sets[0].def[index].nullable, false
 }
 
 // ColumnTypePrecisionScale is defined from driver.RowColumnTypePrecisionScale
-func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool){
-	return rs.sets[0].def[index].precision, rs.sets[0].def[index].scale,false
+func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) {
+	return rs.sets[0].def[index].precision, rs.sets[0].def[index].scale, false
 }
 
 // ColumnTypeScanType is defined from driver.RowsColumnTypeScanType
@@ -108,10 +108,10 @@ func (rs *rowSets) empty() bool {
 
 // Column is a mocked column Metadate for rows.ColumnTypes()
 type Column struct {
-	name, dbTyp string
-	nullable bool
+	name, dbTyp              string
+	nullable                 bool
 	length, precision, scale int64
-	scanType reflect.Type
+	scanType                 reflect.Type
 }
 
 // Rows is a mocked collection of rows to
@@ -119,7 +119,7 @@ type Column struct {
 type Rows struct {
 	converter driver.ValueConverter
 	cols      []string
-  def      []*Column
+	def       []*Column
 	rows      [][]driver.Value
 	pos       int
 	nextErr   map[int]error
@@ -131,18 +131,38 @@ func NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, leng
 	return &Column{name, dbTyp, nullable, length, precision, scale, reflect.TypeOf(exampleValue)}
 }
 
+func NewColumnSimple(name string) *Column {
+	return &Column{name: name}
+}
+
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows.
 // Use Sqlmock.NewRows instead if using a custom converter
-func NewRows(columns ...*Column) *Rows {
-  cols := make([]string, len(columns))
+func NewRows(columns []string) *Rows {
+	definition := make([]*Column, len(columns))
+	for i, column := range columns {
+		definition[i] = NewColumnSimple(column)
+	}
+
+	return &Rows{
+		cols:      columns,
+		def:       definition,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
+	}
+}
+
+// NewRowsWithColumnDefiniton see PR-152
+func NewRowsWithColumnDefiniton(columns ...*Column) *Rows {
+	cols := make([]string, len(columns))
 	for i, column := range columns {
 		cols[i] = column.name
-  }
-  
+	}
+
 	return &Rows{
 		cols:      cols,
+		def:       columns,
 		nextErr:   make(map[int]error),
 		converter: driver.DefaultParameterConverter,
 	}

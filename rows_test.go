@@ -3,7 +3,6 @@ package sqlmock
 import (
 	"database/sql"
 	"fmt"
-	"reflect"
 	"testing"
 )
 

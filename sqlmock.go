@@ -582,7 +582,7 @@ func (c *sqlmock) Rollback() error {
 // NewRows allows Rows to be created from a
 // sql driver.Value slice or from the CSV string and
 // to be used as sql driver.Rows.
-func (c *sqlmock) NewRows(columns []string) *Rows {
+func (c *sqlmock) NewRows(columns []*Column) *Rows {
 	r := NewRows(columns)
 	r.converter = c.converter
 	return r

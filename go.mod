@@ -1,1 +1,1 @@
-module sqlmock
+module github.com/DATA-DOG/go-sqlmock

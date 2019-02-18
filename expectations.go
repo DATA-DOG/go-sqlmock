@@ -295,7 +295,7 @@ func (e *ExpectedPrepare) WillBeClosed() *ExpectedPrepare {
 }
 
 // ExpectQuery allows to expect Query() or QueryRow() on this prepared statement.
-// this method is convenient in order to prevent duplicating sql query string matching.
+// This method is convenient in order to prevent duplicating sql query string matching.
 func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 	eq := &ExpectedQuery{}
 	eq.expectSQL = e.expectSQL
@@ -305,7 +305,7 @@ func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
 }
 
 // ExpectExec allows to expect Exec() on this prepared statement.
-// this method is convenient in order to prevent duplicating sql query string matching.
+// This method is convenient in order to prevent duplicating sql query string matching.
 func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
 	eq := &ExpectedExec{}
 	eq.expectSQL = e.expectSQL

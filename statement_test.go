@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestExpectedPreparedStatemtCloseError(t *testing.T) {
+func TestExpectedPreparedStatementCloseError(t *testing.T) {
 	conn, mock, err := New()
 	if err != nil {
 		t.Fatal("failed to open sqlmock database:", err)
@@ -28,6 +28,6 @@ func TestExpectedPreparedStatemtCloseError(t *testing.T) {
 	}
 
 	if err := stmt.Close(); err != want {
-		t.Fatalf("Got = %v, want = %v", err, want)
+		t.Fatalf("got = %v, want = %v", err, want)
 	}
 }

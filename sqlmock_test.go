@@ -114,7 +114,7 @@ func TestMockQuery(t *testing.T) {
 
 	defer func() {
 		if er := rows.Close(); er != nil {
-			t.Error("Unexpected error while trying to close rows")
+			t.Error("unexpected error while trying to close rows")
 		}
 	}()
 
@@ -167,7 +167,7 @@ func TestMockQueryTypes(t *testing.T) {
 	}
 	defer func() {
 		if er := rows.Close(); er != nil {
-			t.Error("Unexpected error while trying to close rows")
+			t.Error("unexpected error while trying to close rows")
 		}
 	}()
 	if !rows.Next() {
@@ -615,7 +615,7 @@ func TestArgumentReflectValueTypeError(t *testing.T) {
 
 	_, err = db.Query("SELECT * FROM sales WHERE x = ?", 5)
 	if err == nil {
-		t.Error("Expected error, but got none")
+		t.Error("expected error, but got none")
 	}
 }
 
@@ -782,7 +782,7 @@ func TestEmptyRowSet(t *testing.T) {
 
 	defer func() {
 		if er := rows.Close(); er != nil {
-			t.Error("Unexpected error while trying to close rows")
+			t.Error("unexpected error while trying to close rows")
 		}
 	}()
 

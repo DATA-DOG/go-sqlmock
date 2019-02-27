@@ -15,7 +15,7 @@ func stripQuery(q string) (s string) {
 
 // QueryMatcher is an SQL query string matcher interface,
 // which can be used to customize validation of SQL query strings.
-// As an exaple, external library could be used to build
+// As an example, external library could be used to build
 // and validate SQL ast, columns selected.
 //
 // sqlmock can be customized to implement a different QueryMatcher

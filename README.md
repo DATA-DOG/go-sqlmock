@@ -32,7 +32,7 @@ See **.travis.yml** for supported **go** versions.
 Different use case, is to functionally test with a real database - [go-txdb](https://github.com/DATA-DOG/go-txdb)
 all database related actions are isolated within a single transaction so the database can remain in the same state.
 
-    See implementation examples:
+See implementation examples:
 
 - [blog API server](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/blog)
 - [the same orders example](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/orders)

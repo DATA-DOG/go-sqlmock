@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type api struct {

@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/kisielk/sqlstruct"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const ORDER_PENDING = 0

@@ -25,7 +25,6 @@ func (ni *NullInt) Scan(value interface{}) error {
 		ni.Integer, ni.Valid = 0, false
 	case int64:
 		const maxUint = ^uint(0)
-		const minUint = 0
 		const maxInt = int(maxUint >> 1)
 		const minInt = -maxInt - 1
 

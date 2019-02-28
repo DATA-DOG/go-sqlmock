@@ -1,10 +1,6 @@
 package main
 
-import (
-	"database/sql"
-
-	_ "github.com/go-sql-driver/mysql"
-)
+import "database/sql"
 
 func recordStats(db *sql.DB, userID, productID int64) (err error) {
 	tx, err := db.Begin()

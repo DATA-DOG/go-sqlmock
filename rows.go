@@ -52,7 +52,7 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 
 // search the last definition of metadata
 func (rs *rowSets) getDefinition(index int) *Column {
-	for i := rs.pos - 1; i > 0; i-- {
+	for i := rs.pos; i >= 0; i-- {
 		if rs.sets[i].def != nil && len(rs.sets[i].def) > 0 {
 			return rs.sets[i].def[index]
 		}

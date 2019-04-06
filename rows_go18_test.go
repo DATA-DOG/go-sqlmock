@@ -93,53 +93,161 @@ func TestQueryMultiRows(t *testing.T) {
 }
 
 func TestNewColumnWithDefinition(t *testing.T) {
-	column1 := NewColumn("test", "VARCHAR", "", true, 100, 0, 0)
-	column2 := NewColumn("number", "DECIMAL", float64(0.0), false, 0, 10, 4)
-	rows := NewRowsWithColumnDefinition(column1, column2).AddRow("foo.bar", float64(10.123))
 
-	db, mock, _ := New()
-	mock.ExpectQuery("SELECT test, number from dummy").WillReturnRows(rows)
+	t.Run("with one ResultSet", func(t *testing.T) {
+		db, mock, _ := New()
+		column1 := mock.NewColumn("test", "VARCHAR", "", true, 100, 0, 0)
+		column2 := mock.NewColumn("number", "DECIMAL", float64(0.0), false, 0, 10, 4)
+		rows := mock.NewRowsWithColumnDefinition(column1, column2)
+		rows.AddRow("foo.bar", float64(10.123))
 
-	query, _ := db.Query("SELECT test, number from dummy")
+		mQuery := mock.ExpectQuery("SELECT test, number from dummy")
+		isQuery := mQuery.WillReturnRows(rows)
+		isQueryClosed := mQuery.RowsWillBeClosed()
+		isDbClosed := mock.ExpectClose()
 
-	if query.Next() {
-		var test string
-		var number float64
+		query, _ := db.Query("SELECT test, number from dummy")
 
-		if queryError := query.Scan(&test, &number); queryError != nil {
-			t.Fatal(queryError)
-		} else if test != "foo.bar" {
-			t.Fatal("field test is not 'foo.bar'")
-		} else if number != float64(10.123) {
-			t.Fatal("field number is not '10.123'")
+		if false == isQuery.fulfilled() {
+			t.Fatal("Query is not executed")
 		}
 
-		if columnTypes, colTypErr := query.ColumnTypes(); colTypErr != nil {
-			t.Fatal(colTypErr)
-		} else if len(columnTypes) != 2 {
-			t.Fatal("number of columnTypes")
-		} else if name := columnTypes[0].Name(); name != "test" {
-			t.Fatalf("field 'test' has a wrong name '%s'", name)
-		} else if dbTyp := columnTypes[0].DatabaseTypeName(); dbTyp != "VARCHAR" {
-			t.Fatalf("field 'test' has a wrong db type '%s'", dbTyp)
-		} else if columnTypes[0].ScanType().Kind() != reflect.String {
-			t.Fatal("field 'test' has a wrong scanType")
-		} else if precision, scale, _ := columnTypes[0].DecimalSize(); precision != 0 || scale != 0 {
-			t.Fatal("field 'test' has a wrong precision, scale")
-		} else if length, _ := columnTypes[0].Length(); length != 100 {
-			t.Fatalf("field 'test' has a wrong length '%d'", length)
-		} else if name := columnTypes[1].Name(); name != "number" {
-			t.Fatalf("field 'number' has a wrong name '%s'", name)
-		} else if dbTyp := columnTypes[1].DatabaseTypeName(); dbTyp != "DECIMAL" {
-			t.Fatalf("field 'number' has a wrong db type '%s'", dbTyp)
-		} else if columnTypes[1].ScanType().Kind() != reflect.Float64 {
-			t.Fatal("field 'number' has a wrong scanType")
-		} else if precision, scale, _ := columnTypes[1].DecimalSize(); precision != int64(10) || scale != int64(4) {
-			t.Fatal("field 'number' has a wrong precision, scale")
-		} else if length, _ := columnTypes[1].Length(); length != 0 {
-			t.Fatal("field 'number' has a wrong length")
+		if query.Next() {
+			var test string
+			var number float64
+
+			if queryError := query.Scan(&test, &number); queryError != nil {
+				t.Fatal(queryError)
+			} else if test != "foo.bar" {
+				t.Fatal("field test is not 'foo.bar'")
+			} else if number != float64(10.123) {
+				t.Fatal("field number is not '10.123'")
+			}
+
+			if columnTypes, colTypErr := query.ColumnTypes(); colTypErr != nil {
+				t.Fatal(colTypErr)
+			} else if len(columnTypes) != 2 {
+				t.Fatal("number of columnTypes")
+			} else if name := columnTypes[0].Name(); name != "test" {
+				t.Fatalf("field 'test' has a wrong name '%s'", name)
+			} else if dbTyp := columnTypes[0].DatabaseTypeName(); dbTyp != "VARCHAR" {
+				t.Fatalf("field 'test' has a wrong db type '%s'", dbTyp)
+			} else if columnTypes[0].ScanType().Kind() != reflect.String {
+				t.Fatal("field 'test' has a wrong scanType")
+			} else if precision, scale, _ := columnTypes[0].DecimalSize(); precision != 0 || scale != 0 {
+				t.Fatal("field 'test' has a wrong precision, scale")
+			} else if length, _ := columnTypes[0].Length(); length != 100 {
+				t.Fatalf("field 'test' has a wrong length '%d'", length)
+			} else if name := columnTypes[1].Name(); name != "number" {
+				t.Fatalf("field 'number' has a wrong name '%s'", name)
+			} else if dbTyp := columnTypes[1].DatabaseTypeName(); dbTyp != "DECIMAL" {
+				t.Fatalf("field 'number' has a wrong db type '%s'", dbTyp)
+			} else if columnTypes[1].ScanType().Kind() != reflect.Float64 {
+				t.Fatal("field 'number' has a wrong scanType")
+			} else if precision, scale, _ := columnTypes[1].DecimalSize(); precision != int64(10) || scale != int64(4) {
+				t.Fatal("field 'number' has a wrong precision, scale")
+			} else if length, _ := columnTypes[1].Length(); length != 0 {
+				t.Fatal("field 'number' has a wrong length")
+			}
+		} else {
+			t.Fatal("no result set")
 		}
-	} else {
-		t.Fatal("no result set")
-	}
+
+		query.Close()
+		if false == isQueryClosed.fulfilled() {
+			t.Fatal("Query is not executed")
+		}
+
+		db.Close()
+		if false == isDbClosed.fulfilled() {
+			t.Fatal("Query is not closed")
+		}
+	})
+
+	t.Run("with more then one ResultSet", func(t *testing.T) {
+		db, mock, _ := New()
+		column1 := mock.NewColumn("test", "VARCHAR", "", true, 100, 0, 0)
+		column2 := mock.NewColumn("number", "DECIMAL", float64(0.0), false, 0, 10, 4)
+		rows := mock.NewRowsWithColumnDefinition(column1, column2)
+		rows.AddRow("foo.bar", float64(10.123))
+		rows.AddRow("bar.foo", float64(123.10))
+		rows.AddRow("lollipop", float64(10.321))
+
+		mQuery := mock.ExpectQuery("SELECT test, number from dummy")
+		isQuery := mQuery.WillReturnRows(rows)
+		isQueryClosed := mQuery.RowsWillBeClosed()
+		isDbClosed := mock.ExpectClose()
+
+		query, _ := db.Query("SELECT test, number from dummy")
+
+		if false == isQuery.fulfilled() {
+			t.Fatal("Query is not executed")
+		}
+
+		rowsSi := 0
+
+		if query.Next() {
+			var test string
+			var number float64
+
+			if queryError := query.Scan(&test, &number); queryError != nil {
+				t.Fatal(queryError)
+				
+			} else if rowsSi == 0 && test != "foo.bar" {
+				t.Fatal("field test is not 'foo.bar'")
+			} else if rowsSi == 0 && number != float64(10.123) {
+				t.Fatal("field number is not '10.123'")
+
+			} else if rowsSi == 1 && test != "bar.foo" {
+				t.Fatal("field test is not 'bar.bar'")
+			} else if rowsSi == 1 && number != float64(123.10) {
+				t.Fatal("field number is not '123.10'")
+
+			} else if rowsSi == 2 && test != "lollipop" {
+				t.Fatal("field test is not 'lollipop'")
+			} else if rowsSi == 2 && number != float64(10.321) {
+				t.Fatal("field number is not '10.321'")
+			}
+
+			rowsSi++
+
+			if columnTypes, colTypErr := query.ColumnTypes(); colTypErr != nil {
+				t.Fatal(colTypErr)
+			} else if len(columnTypes) != 2 {
+				t.Fatal("number of columnTypes")
+			} else if name := columnTypes[0].Name(); name != "test" {
+				t.Fatalf("field 'test' has a wrong name '%s'", name)
+			} else if dbTyp := columnTypes[0].DatabaseTypeName(); dbTyp != "VARCHAR" {
+				t.Fatalf("field 'test' has a wrong db type '%s'", dbTyp)
+			} else if columnTypes[0].ScanType().Kind() != reflect.String {
+				t.Fatal("field 'test' has a wrong scanType")
+			} else if precision, scale, _ := columnTypes[0].DecimalSize(); precision != 0 || scale != 0 {
+				t.Fatal("field 'test' has a wrong precision, scale")
+			} else if length, _ := columnTypes[0].Length(); length != 100 {
+				t.Fatalf("field 'test' has a wrong length '%d'", length)
+			} else if name := columnTypes[1].Name(); name != "number" {
+				t.Fatalf("field 'number' has a wrong name '%s'", name)
+			} else if dbTyp := columnTypes[1].DatabaseTypeName(); dbTyp != "DECIMAL" {
+				t.Fatalf("field 'number' has a wrong db type '%s'", dbTyp)
+			} else if columnTypes[1].ScanType().Kind() != reflect.Float64 {
+				t.Fatal("field 'number' has a wrong scanType")
+			} else if precision, scale, _ := columnTypes[1].DecimalSize(); precision != int64(10) || scale != int64(4) {
+				t.Fatal("field 'number' has a wrong precision, scale")
+			} else if length, _ := columnTypes[1].Length(); length != 0 {
+				t.Fatal("field 'number' has a wrong length")
+			}
+		} else {
+			t.Fatal("no result set")
+		}
+
+		query.Close()
+		if false == isQueryClosed.fulfilled() {
+			t.Fatal("Query is not executed")
+		}
+
+		db.Close()
+		if false == isDbClosed.fulfilled() {
+			t.Fatal("Query is not closed")
+		}
+	})
 }

@@ -118,7 +118,7 @@ func (c *sqlmock) MatchExpectationsInOrder(b bool) {
 }
 
 // Close a mock database driver connection. It may or may not
-// be called depending on the sircumstances, but if it is called
+// be called depending on the circumstances, but if it is called
 // there must be an *ExpectedClose expectation satisfied.
 // meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Close() error {

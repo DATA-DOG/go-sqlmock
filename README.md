@@ -23,7 +23,7 @@ interface, which was not required or useful for mocking and was removed. Hope it
 
 ## Install
 
-    go get gopkg.in/DATA-DOG/go-sqlmock.v1
+    go get github.com/DATA-DOG/go-sqlmock
 
 ## Documentation and Examples
 
@@ -37,12 +37,16 @@ See implementation examples:
 - [blog API server](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/blog)
 - [the same orders example](https://github.com/DATA-DOG/go-sqlmock/tree/master/examples/orders)
 
-### Something you may want to test
+### Something you may want to test, assuming you use the [go-mysql-driver](https://github.com/go-sql-driver/mysql)
 
 ``` go
 package main
 
-import "database/sql"
+import (
+	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
+)
 
 func recordStats(db *sql.DB, userID, productID int64) (err error) {
 	tx, err := db.Begin()
@@ -91,7 +95,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
 // a successful case
@@ -213,6 +217,7 @@ It only asserts that argument is of `time.Time` type.
 
 ## Change Log
 
+- **2019-02-13** - added `go.mod` removed the references and suggestions using `gopkg.in`.
 - **2018-12-11** - added expectation of Rows to be closed, while mocking expected query.
 - **2018-12-11** - introduced an option to provide **QueryMatcher** in order to customize SQL query matching.
 - **2017-09-01** - it is now possible to expect that prepared statement will be closed,

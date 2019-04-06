@@ -21,7 +21,6 @@ import (
 // for any kind of database action in order to mock
 // and test real database behavior.
 type Sqlmock interface {
-
 	// ExpectClose queues an expectation for this database
 	// action to be triggered. the *ExpectedClose allows
 	// to mock database response
@@ -74,6 +73,13 @@ type Sqlmock interface {
 	// sql driver.Value slice or from the CSV string and
 	// to be used as sql driver.Rows.
 	NewRows(columns []string) *Rows
+
+	// NewRowsWithColumnDefinition allows Rows to be created from a
+	// sql driver.Value slice with a definition of sql metadata
+	NewRowsWithColumnDefinition(columns ...*Column) *Rows
+
+	// New Column allows to create a Column Metadata definition
+	NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, length, precision, scale int64) *Column
 }
 
 type sqlmock struct {
@@ -586,4 +592,17 @@ func (c *sqlmock) NewRows(columns []string) *Rows {
 	r := NewRows(columns)
 	r.converter = c.converter
 	return r
+}
+
+// NewRowsWithColumnDefinition allows Rows to be created from a
+// sql driver.Value slice with a definition of sql metadata
+func (c *sqlmock) NewRowsWithColumnDefinition(columns ...*Column) *Rows {
+	r := NewRowsWithColumnDefinition(columns...)
+	r.converter = c.converter
+	return r
+}
+
+// New Column allows to create a Column Metadata definition
+func (c *sqlmock) NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, length, precision, scale int64) *Column {
+	return NewColumn(name, dbTyp, exampleValue, nullable, length, precision, scale)
 }

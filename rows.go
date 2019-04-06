@@ -50,29 +50,39 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	return r.nextErr[r.pos-1]
 }
 
+// search the last definition of metadata
+func (rs *rowSets) getDefinition(index int) *Column {
+	for i:= rs.pos -1; i > 0; i-- {
+		if rs.sets[i].def != nil && len(rs.sets[i].def) > 0 {
+			return rs.sets[i].def[index]
+		}
+	}
+	return NewColumn("","","",false,0,0,0)
+}
+
 // ColumnTypeLength is defined from driver.RowColumnTypeLength
 func (rs *rowSets) ColumnTypeLength(index int) (length int64, ok bool) {
-	return rs.sets[0].def[index].length, false
+	return rs.getDefinition(index).length, false
 }
 
 // ColumnTypeNullable is defined from driver.RowColumnTypeNullable
 func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool) {
-	return rs.sets[0].def[index].nullable, false
+	return rs.getDefinition(index).nullable, false
 }
 
 // ColumnTypePrecisionScale is defined from driver.RowColumnTypePrecisionScale
 func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) {
-	return rs.sets[0].def[index].precision, rs.sets[0].def[index].scale, false
+	return rs.getDefinition(index).precision, rs.getDefinition(index).scale, false
 }
 
 // ColumnTypeScanType is defined from driver.RowsColumnTypeScanType
 func (rs *rowSets) ColumnTypeScanType(index int) reflect.Type {
-	return rs.sets[0].def[index].scanType
+	return rs.getDefinition(index).scanType
 }
 
 // ColumnTypeDatabaseTypeName is defined RowsColumnTypeDatabaseTypeName
 func (rs *rowSets) ColumnTypeDatabaseTypeName(index int) string {
-	return rs.sets[0].def[index].dbTyp
+	return rs.getDefinition(index).dbTyp
 }
 
 // transforms to debuggable printable string
@@ -106,7 +116,7 @@ func (rs *rowSets) empty() bool {
 	return true
 }
 
-// Column is a mocked column Metadate for rows.ColumnTypes()
+// Column is a mocked column Metadata for rows.ColumnTypes()
 type Column struct {
 	name, dbTyp              string
 	nullable                 bool
@@ -153,8 +163,8 @@ func NewRows(columns []string) *Rows {
 	}
 }
 
-// NewRowsWithColumnDefiniton see PR-152
-func NewRowsWithColumnDefiniton(columns ...*Column) *Rows {
+// NewRowsWithColumnDefinition see PR-152
+func NewRowsWithColumnDefinition(columns ...*Column) *Rows {
 	cols := make([]string, len(columns))
 	for i, column := range columns {
 		cols[i] = column.name

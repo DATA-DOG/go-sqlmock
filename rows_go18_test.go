@@ -95,7 +95,7 @@ func TestQueryMultiRows(t *testing.T) {
 func TestNewColumnWithDefinition(t *testing.T) {
 	column1 := NewColumn("test", "VARCHAR", "", true, 100, 0, 0)
 	column2 := NewColumn("number", "DECIMAL", float64(0.0), false, 0, 10, 4)
-	rows := NewRowsWithColumnDefiniton(column1, column2).AddRow("foo.bar", float64(10.123))
+	rows := NewRowsWithColumnDefinition(column1, column2).AddRow("foo.bar", float64(10.123))
 
 	db, mock, _ := New()
 	mock.ExpectQuery("SELECT test, number from dummy").WillReturnRows(rows)
@@ -142,5 +142,4 @@ func TestNewColumnWithDefinition(t *testing.T) {
 	} else {
 		t.Fatal("no result set")
 	}
-
 }

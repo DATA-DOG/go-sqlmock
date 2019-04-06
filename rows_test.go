@@ -74,7 +74,6 @@ func ExampleRows_closeError() {
 	defer db.Close()
 
 	rows := NewRows([]string{"id", "title"}).CloseError(fmt.Errorf("close error"))
-
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")

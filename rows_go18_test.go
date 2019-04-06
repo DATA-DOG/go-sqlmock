@@ -192,7 +192,7 @@ func TestNewColumnWithDefinition(t *testing.T) {
 
 			if queryError := query.Scan(&test, &number); queryError != nil {
 				t.Fatal(queryError)
-				
+
 			} else if rowsSi == 0 && test != "foo.bar" {
 				t.Fatal("field test is not 'foo.bar'")
 			} else if rowsSi == 0 && number != float64(10.123) {

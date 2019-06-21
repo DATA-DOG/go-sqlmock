@@ -1,12 +1,15 @@
 package sqlmock
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"strings"
 )
+
+const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
 
 // CSVColumnParser is a function which converts trimmed csv
 // column string to a []byte representation. Currently
@@ -23,6 +26,7 @@ type rowSets struct {
 	sets []*Rows
 	pos  int
 	ex   *ExpectedQuery
+	raw  [][]byte
 }
 
 func (rs *rowSets) Columns() []string {
@@ -30,6 +34,7 @@ func (rs *rowSets) Columns() []string {
 }
 
 func (rs *rowSets) Close() error {
+	rs.invalidateRaw()
 	rs.ex.rowsWereClosed = true
 	return rs.sets[rs.pos].closeErr
 }
@@ -38,11 +43,17 @@ func (rs *rowSets) Close() error {
 func (rs *rowSets) Next(dest []driver.Value) error {
 	r := rs.sets[rs.pos]
 	r.pos++
+	rs.invalidateRaw()
 	if r.pos > len(r.rows) {
 		return io.EOF // per interface spec
 	}
 
 	for i, col := range r.rows[r.pos-1] {
+		if b, ok := rawBytes(col); ok {
+			rs.raw = append(rs.raw, b)
+			dest[i] = b
+			continue
+		}
 		dest[i] = col
 	}
 
@@ -78,6 +89,30 @@ func (rs *rowSets) empty() bool {
 		}
 	}
 	return true
+}
+
+func rawBytes(col driver.Value) (_ []byte, ok bool) {
+	val, ok := col.([]byte)
+	if !ok || len(val) == 0 {
+		return nil, false
+	}
+	// Copy the bytes from the mocked row into a shared raw buffer, which we'll replace the content of later
+	// This allows scanning into sql.RawBytes to correctly become invalid on subsequent calls to Next(), Scan() or Close()
+	b := make([]byte, len(val))
+	copy(b, val)
+	return b, true
+}
+
+// Bytes that could have been scanned as sql.RawBytes are only valid until the next call to Next, Scan or Close.
+// If those occur, we must replace their content to simulate the shared memory to expose misuse of sql.RawBytes
+func (rs *rowSets) invalidateRaw() {
+	// Replace the content of slices previously returned
+	b := []byte(invalidate)
+	for _, r := range rs.raw {
+		copy(r, bytes.Repeat(b, len(r)/len(b)+1))
+	}
+	// Start with new slices for the next scan
+	rs.raw = nil
 }
 
 // Rows is a mocked collection of rows to

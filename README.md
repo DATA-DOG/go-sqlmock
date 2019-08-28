@@ -217,6 +217,7 @@ It only asserts that argument is of `time.Time` type.
 
 ## Change Log
 
+- **2019-04-06** - added functionality to mock a sql MetaData request 
 - **2019-02-13** - added `go.mod` removed the references and suggestions using `gopkg.in`.
 - **2018-12-11** - added expectation of Rows to be closed, while mocking expected query.
 - **2018-12-11** - introduced an option to provide **QueryMatcher** in order to customize SQL query matching.

@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 )
 
@@ -58,6 +59,41 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	}
 
 	return r.nextErr[r.pos-1]
+}
+
+// search the last definition of metadata
+func (rs *rowSets) getDefinition(index int) *Column {
+	for i := rs.pos; i >= 0; i-- {
+		if rs.sets[i].def != nil && len(rs.sets[i].def) > 0 {
+			return rs.sets[i].def[index]
+		}
+	}
+	return NewColumn("", "", "", false, 0, 0, 0)
+}
+
+// ColumnTypeLength is defined from driver.RowColumnTypeLength
+func (rs *rowSets) ColumnTypeLength(index int) (length int64, ok bool) {
+	return rs.getDefinition(index).length, false
+}
+
+// ColumnTypeNullable is defined from driver.RowColumnTypeNullable
+func (rs *rowSets) ColumnTypeNullable(index int) (nullable, ok bool) {
+	return rs.getDefinition(index).nullable, false
+}
+
+// ColumnTypePrecisionScale is defined from driver.RowColumnTypePrecisionScale
+func (rs *rowSets) ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) {
+	return rs.getDefinition(index).precision, rs.getDefinition(index).scale, false
+}
+
+// ColumnTypeScanType is defined from driver.RowsColumnTypeScanType
+func (rs *rowSets) ColumnTypeScanType(index int) reflect.Type {
+	return rs.getDefinition(index).scanType
+}
+
+// ColumnTypeDatabaseTypeName is defined RowsColumnTypeDatabaseTypeName
+func (rs *rowSets) ColumnTypeDatabaseTypeName(index int) string {
+	return rs.getDefinition(index).dbTyp
 }
 
 // transforms to debuggable printable string
@@ -115,15 +151,33 @@ func (rs *rowSets) invalidateRaw() {
 	rs.raw = nil
 }
 
+// Column is a mocked column Metadata for rows.ColumnTypes()
+type Column struct {
+	name, dbTyp              string
+	nullable                 bool
+	length, precision, scale int64
+	scanType                 reflect.Type
+}
+
 // Rows is a mocked collection of rows to
 // return for Query result
 type Rows struct {
 	converter driver.ValueConverter
 	cols      []string
+	def       []*Column
 	rows      [][]driver.Value
 	pos       int
 	nextErr   map[int]error
 	closeErr  error
+}
+
+// New Column allows to create a Column Metadata definition
+func NewColumn(name, dbTyp string, exampleValue interface{}, nullable bool, length, precision, scale int64) *Column {
+	return &Column{name, dbTyp, nullable, length, precision, scale, reflect.TypeOf(exampleValue)}
+}
+
+func NewColumnSimple(name string) *Column {
+	return &Column{name: name}
 }
 
 // NewRows allows Rows to be created from a
@@ -131,8 +185,29 @@ type Rows struct {
 // to be used as sql driver.Rows.
 // Use Sqlmock.NewRows instead if using a custom converter
 func NewRows(columns []string) *Rows {
+	definition := make([]*Column, len(columns))
+	for i, column := range columns {
+		definition[i] = NewColumnSimple(column)
+	}
+
 	return &Rows{
 		cols:      columns,
+		def:       definition,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
+	}
+}
+
+// NewRowsWithColumnDefinition see PR-152
+func NewRowsWithColumnDefinition(columns ...*Column) *Rows {
+	cols := make([]string, len(columns))
+	for i, column := range columns {
+		cols[i] = column.name
+	}
+
+	return &Rows{
+		cols:      cols,
+		def:       columns,
 		nextErr:   make(map[int]error),
 		converter: driver.DefaultParameterConverter,
 	}

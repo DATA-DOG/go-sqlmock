@@ -4,7 +4,6 @@ package sqlmock
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"reflect"
 )
@@ -52,10 +51,6 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 		darg, err := e.converter.ConvertValue(dval)
 		if err != nil {
 			return fmt.Errorf("could not convert %d argument %T - %+v to driver value: %s", k, e.args[k], e.args[k], err)
-		}
-
-		if !driver.IsValue(darg) {
-			return fmt.Errorf("argument %d: non-subset type %T returned from Value", k, darg)
 		}
 
 		if !reflect.DeepEqual(darg, v.Value) {

@@ -1,8 +1,11 @@
 package sqlmock
 
 import (
+	"context"
 	"database/sql/driver"
+	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -133,6 +136,95 @@ func TestBuildQuery(t *testing.T) {
 	db.Exec(query)
 	db.Prepare(query)
 
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Error(err)
+	}
+}
+
+type CustomConverter struct{}
+
+func (s CustomConverter) ConvertValue(v interface{}) (driver.Value, error) {
+	switch v.(type) {
+	case string:
+		return v.(string), nil
+	case []string:
+		return v.([]string), nil
+	case int:
+		return v.(int), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("cannot convert %T with value %v", v, v))
+	}
+}
+func TestCustomValueConverterQueryScan(t *testing.T) {
+	db, mock, _ := New(ValueConverterOption(CustomConverter{}))
+	query := `
+		SELECT
+			name,
+			email,
+			address,
+			anotherfield
+		FROM user
+		where
+			name    = 'John'
+			and
+			address = 'Jakarta'
+
+	`
+	expectedStringValue := "ValueOne"
+	expectedIntValue := 2
+	expectedArrayValue := []string{"Three", "Four"}
+	mock.ExpectQuery(query).WillReturnRows(mock.NewRows([]string{"One", "Two", "Three"}).AddRow(expectedStringValue, expectedIntValue, []string{"Three", "Four"}))
+	row := db.QueryRow(query)
+	var stringValue string
+	var intValue int
+	var arrayValue []string
+	if e := row.Scan(&stringValue, &intValue, &arrayValue); e != nil {
+		t.Error(e)
+	}
+	if stringValue != expectedStringValue {
+		t.Errorf("Expectation %s does not met: %s", expectedStringValue, stringValue)
+	}
+	if intValue != expectedIntValue {
+		t.Errorf("Expectation %d does not met: %d", expectedIntValue, intValue)
+	}
+	if !reflect.DeepEqual(expectedArrayValue, arrayValue) {
+		t.Errorf("Expectation %v does not met: %v", expectedArrayValue, arrayValue)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCustomValueConverterExec(t *testing.T) {
+	db, mock, _ := New(ValueConverterOption(CustomConverter{}))
+	expectedQuery := "INSERT INTO tags \\(name,email,age,hobbies\\) VALUES \\(\\?,\\?,\\?,\\?\\)"
+	query := "INSERT INTO tags (name,email,age,hobbies) VALUES (?,?,?,?)"
+	name := "John"
+	email := "j@jj.j"
+	age := 12
+	hobbies := []string{"soccer", "netflix"}
+	mock.ExpectBegin()
+	mock.ExpectPrepare(expectedQuery)
+	mock.ExpectExec(expectedQuery).WithArgs(name, email, age, hobbies).WillReturnResult(NewResult(1, 1))
+	mock.ExpectCommit()
+
+	ctx := context.Background()
+	tx, e := db.BeginTx(ctx, nil)
+	if e != nil {
+		t.Error(e)
+		return
+	}
+	stmt, e := db.PrepareContext(ctx, query)
+	if e != nil {
+		t.Error(e)
+		return
+	}
+	_, e = stmt.Exec(name, email, age, hobbies)
+	if e != nil {
+		t.Error(e)
+		return
+	}
+	tx.Commit()
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Error(err)
 	}

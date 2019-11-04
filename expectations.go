@@ -353,3 +353,32 @@ func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
 	err = e.argsMatches(args)
 	return
 }
+
+// ExpectedPing is used to manage *sql.DB.Ping expectations.
+// Returned by *Sqlmock.ExpectPing.
+type ExpectedPing struct {
+	commonExpectation
+	delay time.Duration
+}
+
+// WillDelayFor allows to specify duration for which it will delay result. May
+// be used together with Context.
+func (e *ExpectedPing) WillDelayFor(duration time.Duration) *ExpectedPing {
+	e.delay = duration
+	return e
+}
+
+// WillReturnError allows to set an error for expected database ping
+func (e *ExpectedPing) WillReturnError(err error) *ExpectedPing {
+	e.err = err
+	return e
+}
+
+// String returns string representation
+func (e *ExpectedPing) String() string {
+	msg := "ExpectedPing => expecting database Ping"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
+}

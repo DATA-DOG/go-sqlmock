@@ -15,12 +15,7 @@ var ErrCancelled = errors.New("canceling query due to user request")
 
 // Implement the "QueryerContext" interface
 func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	namedArgs := make([]namedValue, len(args))
-	for i, nv := range args {
-		namedArgs[i] = namedValue(nv)
-	}
-
-	ex, err := c.query(query, namedArgs)
+	ex, err := c.query(query, args)
 	if ex != nil {
 		select {
 		case <-time.After(ex.delay):
@@ -38,12 +33,7 @@ func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.
 
 // Implement the "ExecerContext" interface
 func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	namedArgs := make([]namedValue, len(args))
-	for i, nv := range args {
-		namedArgs[i] = namedValue(nv)
-	}
-
-	ex, err := c.exec(query, namedArgs)
+	ex, err := c.exec(query, args)
 	if ex != nil {
 		select {
 		case <-time.After(ex.delay):

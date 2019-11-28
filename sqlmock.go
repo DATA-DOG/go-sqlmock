@@ -247,9 +247,9 @@ func (c *sqlmock) ExpectBegin() *ExpectedBegin {
 
 // Exec meets http://golang.org/pkg/database/sql/driver/#Execer
 func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error) {
-	namedArgs := make([]namedValue, len(args))
+	namedArgs := make([]driver.NamedValue, len(args))
 	for i, v := range args {
-		namedArgs[i] = namedValue{
+		namedArgs[i] = driver.NamedValue{
 			Ordinal: i + 1,
 			Value:   v,
 		}
@@ -266,7 +266,7 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error)
 	return ex.result, nil
 }
 
-func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
+func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, error) {
 	var expected *ExpectedExec
 	var fulfilled int
 	var ok bool
@@ -401,17 +401,11 @@ func (c *sqlmock) ExpectPrepare(expectedSQL string) *ExpectedPrepare {
 	return e
 }
 
-type namedValue struct {
-	Name    string
-	Ordinal int
-	Value   driver.Value
-}
-
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer
 func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) {
-	namedArgs := make([]namedValue, len(args))
+	namedArgs := make([]driver.NamedValue, len(args))
 	for i, v := range args {
-		namedArgs[i] = namedValue{
+		namedArgs[i] = driver.NamedValue{
 			Ordinal: i + 1,
 			Value:   v,
 		}
@@ -428,7 +422,7 @@ func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) 
 	return ex.rows, nil
 }
 
-func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error) {
+func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery, error) {
 	var expected *ExpectedQuery
 	var fulfilled int
 	var ok bool

@@ -339,7 +339,7 @@ type queryBasedExpectation struct {
 	args      []driver.Value
 }
 
-func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
+func (e *queryBasedExpectation) attemptArgMatch(args []driver.NamedValue) (err error) {
 	// catch panic
 	defer func() {
 		if e := recover(); e != nil {

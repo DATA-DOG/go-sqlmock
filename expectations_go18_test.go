@@ -10,7 +10,7 @@ import (
 
 func TestQueryExpectationNamedArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
-	against := []namedValue{{Value: int64(5), Name: "id"}}
+	against := []driver.NamedValue{{Value: int64(5), Name: "id"}}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
 	}
@@ -24,7 +24,7 @@ func TestQueryExpectationNamedArgComparison(t *testing.T) {
 		t.Error("arguments should not match, since the size is not the same")
 	}
 
-	against = []namedValue{
+	against = []driver.NamedValue{
 		{Value: int64(5), Name: "id"},
 		{Value: "str", Name: "s"},
 	}
@@ -33,7 +33,7 @@ func TestQueryExpectationNamedArgComparison(t *testing.T) {
 		t.Errorf("arguments should have matched, but it did not: %v", err)
 	}
 
-	against = []namedValue{
+	against = []driver.NamedValue{
 		{Value: int64(5), Name: "id"},
 		{Value: "str", Name: "username"},
 	}
@@ -44,7 +44,7 @@ func TestQueryExpectationNamedArgComparison(t *testing.T) {
 
 	e.args = []driver.Value{int64(5), "str"}
 
-	against = []namedValue{
+	against = []driver.NamedValue{
 		{Value: int64(5), Ordinal: 0},
 		{Value: "str", Ordinal: 1},
 	}
@@ -53,7 +53,7 @@ func TestQueryExpectationNamedArgComparison(t *testing.T) {
 		t.Error("arguments matched, but it should have not due to wrong Ordinal position")
 	}
 
-	against = []namedValue{
+	against = []driver.NamedValue{
 		{Value: int64(5), Ordinal: 1},
 		{Value: "str", Ordinal: 2},
 	}

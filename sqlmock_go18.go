@@ -6,6 +6,8 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 )
 
@@ -95,11 +97,57 @@ func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt
 	return nil, err
 }
 
-// Implement the "Pinger" interface
-// for now we do not have a Ping expectation
-// may be something for the future
+// Implement the "Pinger" interface - the explicit DB driver ping was only added to database/sql in Go 1.8
 func (c *sqlmock) Ping(ctx context.Context) error {
-	return nil
+	if !c.monitorPings {
+		return nil
+	}
+
+	ex, err := c.ping()
+	if ex != nil {
+		select {
+		case <-ctx.Done():
+			return ErrCancelled
+		case <-time.After(ex.delay):
+		}
+	}
+
+	return err
+}
+
+func (c *sqlmock) ping() (*ExpectedPing, error) {
+	var expected *ExpectedPing
+	var fulfilled int
+	var ok bool
+	for _, next := range c.expected {
+		next.Lock()
+		if next.fulfilled() {
+			next.Unlock()
+			fulfilled++
+			continue
+		}
+
+		if expected, ok = next.(*ExpectedPing); ok {
+			break
+		}
+
+		next.Unlock()
+		if c.ordered {
+			return nil, fmt.Errorf("call to database Ping, was not expected, next expectation is: %s", next)
+		}
+	}
+
+	if expected == nil {
+		msg := "call to database Ping was not expected"
+		if fulfilled == len(c.expected) {
+			msg = "all expectations were already fulfilled, " + msg
+		}
+		return nil, fmt.Errorf(msg)
+	}
+
+	expected.triggered = true
+	expected.Unlock()
+	return expected, expected.err
 }
 
 // Implement the "StmtExecContext" interface
@@ -110,6 +158,16 @@ func (stmt *statement) ExecContext(ctx context.Context, args []driver.NamedValue
 // Implement the "StmtQueryContext" interface
 func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	return stmt.conn.QueryContext(ctx, stmt.query, args)
+}
+
+func (c *sqlmock) ExpectPing() *ExpectedPing {
+	if !c.monitorPings {
+		log.Println("ExpectPing will have no effect as monitoring pings is disabled. Use MonitorPingsOption to enable.")
+		return nil
+	}
+	e := &ExpectedPing{}
+	c.expected = append(c.expected, e)
+	return e
 }
 
 // @TODO maybe add ExpectedBegin.WithOptions(driver.TxOptions)

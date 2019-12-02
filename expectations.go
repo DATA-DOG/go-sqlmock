@@ -339,21 +339,6 @@ type queryBasedExpectation struct {
 	args      []driver.Value
 }
 
-func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
-	// catch panic
-	defer func() {
-		if e := recover(); e != nil {
-			_, ok := e.(error)
-			if !ok {
-				err = fmt.Errorf(e.(string))
-			}
-		}
-	}()
-
-	err = e.argsMatches(args)
-	return
-}
-
 // ExpectedPing is used to manage *sql.DB.Ping expectations.
 // Returned by *Sqlmock.ExpectPing.
 type ExpectedPing struct {

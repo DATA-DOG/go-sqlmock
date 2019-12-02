@@ -21,7 +21,6 @@ import (
 // for any kind of database action in order to mock
 // and test real database behavior.
 type Sqlmock interface {
-
 	// ExpectClose queues an expectation for this database
 	// action to be triggered. the *ExpectedClose allows
 	// to mock database response
@@ -57,6 +56,17 @@ type Sqlmock interface {
 	// the *ExpectedRollback allows to mock database response
 	ExpectRollback() *ExpectedRollback
 
+	// ExpectPing expected *sql.DB.Ping to be called.
+	// the *ExpectedPing allows to mock database response
+	//
+	// Ping support only exists in the SQL library in Go 1.8 and above.
+	// ExpectPing in Go <=1.7 will return an ExpectedPing but not register
+	// any expectations.
+	//
+	// You must enable pings using MonitorPingsOption for this to register
+	// any expectations.
+	ExpectPing() *ExpectedPing
+
 	// MatchExpectationsInOrder gives an option whether to match all
 	// expectations in the order they were set or not.
 	//
@@ -83,6 +93,7 @@ type sqlmock struct {
 	drv          *mockDriver
 	converter    driver.ValueConverter
 	queryMatcher QueryMatcher
+	monitorPings bool
 
 	expected []expectation
 }
@@ -103,6 +114,15 @@ func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error)
 	}
 	if c.queryMatcher == nil {
 		c.queryMatcher = QueryMatcherRegexp
+	}
+
+	if c.monitorPings {
+		// We call Ping on the driver shortly to verify startup assertions by
+		// driving internal behaviour of the sql standard library. We don't
+		// want this call to ping to be monitored for expectation purposes so
+		// temporarily disable.
+		c.monitorPings = false
+		defer func() { c.monitorPings = true }()
 	}
 	return db, c, db.Ping()
 }

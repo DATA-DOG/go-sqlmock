@@ -474,3 +474,168 @@ func TestContextExecErrorDelay(t *testing.T) {
 		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
 	}
 }
+
+// TestMonitorPingsDisabled verifies backwards-compatibility with behaviour of the library in which
+// calls to Ping are not mocked out. It verifies this persists when the user does not enable the new
+// behaviour.
+func TestMonitorPingsDisabled(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// When monitoring of pings is not enabled in the mock, calling Ping should have no effect.
+	err = db.Ping()
+	if err != nil {
+		t.Errorf("monitoring of pings is not enabled so did not expect error from Ping, got '%s'", err)
+	}
+
+	// Calling ExpectPing should also not register any expectations in the mock. The return from
+	// ExpectPing should be nil.
+	expectation := mock.ExpectPing()
+	if expectation != nil {
+		t.Errorf("expected ExpectPing to return a nil pointer when monitoring of pings is not enabled")
+	}
+
+	err = mock.ExpectationsWereMet()
+	if err != nil {
+		t.Errorf("monitoring of pings is not enabled so ExpectPing should not register an expectation, got '%s'", err)
+	}
+}
+
+func TestPingExpectations(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPing()
+	if err := db.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestPingExpectationsErrorDelay(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	var delay time.Duration
+	delay = 100 * time.Millisecond
+	mock.ExpectPing().
+		WillReturnError(errors.New("slow fail")).
+		WillDelayFor(delay)
+
+	start := time.Now()
+	err = db.Ping()
+	stop := time.Now()
+
+	if err == nil {
+		t.Errorf("result was not expected, was not expecting nil error")
+	}
+
+	if err.Error() != "slow fail" {
+		t.Errorf("error '%s' was not expected, was expecting '%s'", err.Error(), "slow fail")
+	}
+
+	elapsed := stop.Sub(start)
+	if elapsed < delay {
+		t.Errorf("expecting a delay of %v before error, actual delay was %v", delay, elapsed)
+	}
+
+	mock.ExpectPing().WillReturnError(errors.New("fast fail"))
+
+	start = time.Now()
+	db.Ping()
+	stop = time.Now()
+
+	elapsed = stop.Sub(start)
+	if elapsed > delay {
+		t.Errorf("expecting a delay of less than %v before error, actual delay was %v", delay, elapsed)
+	}
+}
+
+func TestPingExpectationsMissingPing(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPing()
+
+	if err = mock.ExpectationsWereMet(); err == nil {
+		t.Fatalf("was expecting an error, but there wasn't one")
+	}
+}
+
+func TestPingExpectationsUnexpectedPing(t *testing.T) {
+	t.Parallel()
+	db, _, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	if err = db.Ping(); err == nil {
+		t.Fatalf("was expecting an error, but there wasn't any")
+	}
+}
+
+func TestPingOrderedWrongOrder(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectPing()
+	mock.MatchExpectationsInOrder(true)
+
+	if err = db.Ping(); err == nil {
+		t.Fatalf("was expecting an error, but there wasn't any")
+	}
+}
+
+func TestPingExpectationsContextTimeout(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New(MonitorPingsOption(true))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPing().WillDelayFor(time.Hour)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	doneCh := make(chan struct{})
+	go func() {
+		err = db.PingContext(ctx)
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		if err != ErrCancelled {
+			t.Errorf("expected error '%s' to be returned from Ping, but got '%s'", ErrCancelled, err)
+		}
+	case <-time.After(time.Second):
+		t.Errorf("expected Ping to return after context timeout, but it did not in a timely fashion")
+	}
+}

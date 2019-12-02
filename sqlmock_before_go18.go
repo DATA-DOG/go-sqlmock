@@ -1,16 +1,13 @@
 // +build !go1.8
 
-/*
-Package sqlmock is a mock library implementing sql driver. Which has one and only
-purpose - to simulate any sql driver behavior in tests, without needing a real
-database connection. It helps to maintain correct **TDD** workflow.
-
-It does not require any modifications to your source code in order to test
-and mock database operations. Supports concurrency and multiple database mocking.
-
-The driver allows to mock any sql driver method behavior.
-*/
 package sqlmock
+
+import "log"
+
+func (c *sqlmock) ExpectPing() *ExpectedPing {
+	log.Println("ExpectPing has no effect on Go 1.7 or below")
+	return &ExpectedPing{}
+}
 
 func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	var expected *ExpectedExec

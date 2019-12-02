@@ -15,7 +15,7 @@ func (e *ExpectedQuery) WillReturnRows(rows *Rows) *ExpectedQuery {
 	return e
 }
 
-func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
+func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 	if nil == e.args {
 		return nil
 	}
@@ -49,4 +49,19 @@ func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 		}
 	}
 	return nil
+}
+
+func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
+	// catch panic
+	defer func() {
+		if e := recover(); e != nil {
+			_, ok := e.(error)
+			if !ok {
+				err = fmt.Errorf(e.(string))
+			}
+		}
+	}()
+
+	err = e.argsMatches(args)
+	return
 }

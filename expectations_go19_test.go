@@ -4,8 +4,26 @@ package sqlmock
 
 import (
 	"context"
+	"database/sql/driver"
+	"errors"
+	"fmt"
 	"testing"
 )
+
+type CustomConverter struct{}
+
+func (s CustomConverter) ConvertValue(v interface{}) (driver.Value, error) {
+	switch v.(type) {
+	case string:
+		return v.(string), nil
+	case []string:
+		return v.([]string), nil
+	case int:
+		return v.(int), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("cannot convert %T with value %v", v, v))
+	}
+}
 
 func TestCustomValueConverterExec(t *testing.T) {
 	db, mock, _ := New(ValueConverterOption(CustomConverter{}))

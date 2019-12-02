@@ -1,0 +1,74 @@
+// +build !go1.8
+
+/*
+Package sqlmock is a mock library implementing sql driver. Which has one and only
+purpose - to simulate any sql driver behavior in tests, without needing a real
+database connection. It helps to maintain correct **TDD** workflow.
+
+It does not require any modifications to your source code in order to test
+and mock database operations. Supports concurrency and multiple database mocking.
+
+The driver allows to mock any sql driver method behavior.
+*/
+package sqlmock
+
+func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
+	var expected *ExpectedExec
+	var fulfilled int
+	var ok bool
+	for _, next := range c.expected {
+		next.Lock()
+		if next.fulfilled() {
+			next.Unlock()
+			fulfilled++
+			continue
+		}
+
+		if c.ordered {
+			if expected, ok = next.(*ExpectedExec); ok {
+				break
+			}
+			next.Unlock()
+			return nil, fmt.Errorf("call to ExecQuery '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
+		}
+		if exec, ok := next.(*ExpectedExec); ok {
+			if err := c.queryMatcher.Match(exec.expectSQL, query); err != nil {
+				next.Unlock()
+				continue
+			}
+
+			if err := exec.attemptArgMatch(args); err == nil {
+				expected = exec
+				break
+			}
+		}
+		next.Unlock()
+	}
+	if expected == nil {
+		msg := "call to ExecQuery '%s' with args %+v was not expected"
+		if fulfilled == len(c.expected) {
+			msg = "all expectations were already fulfilled, " + msg
+		}
+		return nil, fmt.Errorf(msg, query, args)
+	}
+	defer expected.Unlock()
+
+	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		return nil, fmt.Errorf("ExecQuery: %v", err)
+	}
+
+	if err := expected.argsMatches(args); err != nil {
+		return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
+	}
+
+	expected.triggered = true
+	if expected.err != nil {
+		return expected, expected.err // mocked to return error
+	}
+
+	if expected.result == nil {
+		return nil, fmt.Errorf("ExecQuery '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %T as %+v", query, args, expected, expected)
+	}
+
+	return expected, nil
+}

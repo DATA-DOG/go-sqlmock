@@ -338,18 +338,3 @@ type queryBasedExpectation struct {
 	converter driver.ValueConverter
 	args      []driver.Value
 }
-
-func (e *queryBasedExpectation) attemptArgMatch(args []driver.NamedValue) (err error) {
-	// catch panic
-	defer func() {
-		if e := recover(); e != nil {
-			_, ok := e.(error)
-			if !ok {
-				err = fmt.Errorf(e.(string))
-			}
-		}
-	}()
-
-	err = e.argsMatches(args)
-	return
-}

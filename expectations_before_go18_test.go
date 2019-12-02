@@ -1,29 +1,22 @@
-// +build go1.8
+// +build !go1.8
 
 package sqlmock
 
-import (
-	"database/sql"
-	"database/sql/driver"
-	"testing"
-	"time"
-)
-
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
-	against := []driver.NamedValue{{Value: int64(5), Ordinal: 1}}
+	against := []namedValue{{Value: int64(5), Ordinal: 1}}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
 	}
 
 	e.args = []driver.Value{5, "str"}
 
-	against = []driver.NamedValue{{Value: int64(5), Ordinal: 1}}
+	against = []namedValue{{Value: int64(5), Ordinal: 1}}
 	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since the size is not the same")
 	}
 
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: int64(3), Ordinal: 1},
 		{Value: "str", Ordinal: 2},
 	}
@@ -31,7 +24,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 		t.Error("arguments should not match, since the first argument (int value) is different")
 	}
 
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: int64(5), Ordinal: 1},
 		{Value: "st", Ordinal: 2},
 	}
@@ -39,7 +32,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 		t.Error("arguments should not match, since the second argument (string value) is different")
 	}
 
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: int64(5), Ordinal: 1},
 		{Value: "str", Ordinal: 2},
 	}
@@ -51,7 +44,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 	tm, _ := time.Parse(longForm, "Feb 3, 2013 at 7:54pm (PST)")
 	e.args = []driver.Value{5, tm}
 
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: int64(5), Ordinal: 1},
 		{Value: tm, Ordinal: 2},
 	}
@@ -69,7 +62,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	var e *queryBasedExpectation
 
 	e = &queryBasedExpectation{args: []driver.Value{true}, converter: driver.DefaultParameterConverter}
-	against := []driver.NamedValue{
+	against := []namedValue{
 		{Value: true, Ordinal: 1},
 	}
 	if err := e.argsMatches(against); err != nil {
@@ -77,7 +70,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{false}, converter: driver.DefaultParameterConverter}
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: false, Ordinal: 1},
 	}
 	if err := e.argsMatches(against); err != nil {
@@ -85,7 +78,7 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{true}, converter: driver.DefaultParameterConverter}
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: false, Ordinal: 1},
 	}
 	if err := e.argsMatches(against); err == nil {
@@ -93,65 +86,10 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 	}
 
 	e = &queryBasedExpectation{args: []driver.Value{false}, converter: driver.DefaultParameterConverter}
-	against = []driver.NamedValue{
+	against = []namedValue{
 		{Value: true, Ordinal: 1},
 	}
 	if err := e.argsMatches(against); err == nil {
 		t.Error("arguments should not match, since argument is different")
-	}
-}
-
-func TestQueryExpectationNamedArgComparison(t *testing.T) {
-	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
-	against := []driver.NamedValue{{Value: int64(5), Name: "id"}}
-	if err := e.argsMatches(against); err != nil {
-		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
-	}
-
-	e.args = []driver.Value{
-		sql.Named("id", 5),
-		sql.Named("s", "str"),
-	}
-
-	if err := e.argsMatches(against); err == nil {
-		t.Error("arguments should not match, since the size is not the same")
-	}
-
-	against = []driver.NamedValue{
-		{Value: int64(5), Name: "id"},
-		{Value: "str", Name: "s"},
-	}
-
-	if err := e.argsMatches(against); err != nil {
-		t.Errorf("arguments should have matched, but it did not: %v", err)
-	}
-
-	against = []driver.NamedValue{
-		{Value: int64(5), Name: "id"},
-		{Value: "str", Name: "username"},
-	}
-
-	if err := e.argsMatches(against); err == nil {
-		t.Error("arguments matched, but it should have not due to Name")
-	}
-
-	e.args = []driver.Value{int64(5), "str"}
-
-	against = []driver.NamedValue{
-		{Value: int64(5), Ordinal: 0},
-		{Value: "str", Ordinal: 1},
-	}
-
-	if err := e.argsMatches(against); err == nil {
-		t.Error("arguments matched, but it should have not due to wrong Ordinal position")
-	}
-
-	against = []driver.NamedValue{
-		{Value: int64(5), Ordinal: 1},
-		{Value: "str", Ordinal: 2},
-	}
-
-	if err := e.argsMatches(against); err != nil {
-		t.Errorf("arguments should have matched, but it did not: %v", err)
 	}
 }

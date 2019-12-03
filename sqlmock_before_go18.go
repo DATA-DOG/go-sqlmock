@@ -2,7 +2,10 @@
 
 package sqlmock
 
-import "log"
+import (
+	"database/sql/driver"
+	"log"
+)
 
 type namedValue struct {
 	Name    string

@@ -2,6 +2,12 @@
 
 package sqlmock
 
+import (
+	"database/sql/driver"
+	"testing"
+	"time"
+)
+
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
 	against := []namedValue{{Value: int64(5), Ordinal: 1}}

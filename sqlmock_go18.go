@@ -161,6 +161,7 @@ func (c *sqlmock) ExpectPing() *ExpectedPing {
 }
 
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer
+// Deprecated: Drivers should implement QueryerContext instead.
 func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) {
 	namedArgs := make([]driver.NamedValue, len(args))
 	for i, v := range args {
@@ -243,6 +244,7 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 }
 
 // Exec meets http://golang.org/pkg/database/sql/driver/#Execer
+// Deprecated: Drivers should implement ExecerContext instead.
 func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error) {
 	namedArgs := make([]driver.NamedValue, len(args))
 	for i, v := range args {

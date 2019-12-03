@@ -10,8 +10,6 @@ import (
 // CheckNamedValue meets https://golang.org/pkg/database/sql/driver/#NamedValueChecker
 func (c *sqlmock) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	switch nv.Value.(type) {
-	case sql.NamedArg:
-		return nil
 	case sql.Out:
 		return nil
 	default:

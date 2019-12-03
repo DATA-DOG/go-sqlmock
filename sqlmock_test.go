@@ -2,8 +2,10 @@ package sqlmock
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -1216,4 +1218,45 @@ func queryWithTimeout(t time.Duration, db *sql.DB, query string, args ...interfa
 	case <-time.After(t):
 		return nil, fmt.Errorf("query timed out after %v", t)
 	}
+}
+
+func Test_sqlmock_Prepare_and_Exec(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	query := "SELECT name, email FROM users WHERE name = ?"
+
+	mock.ExpectPrepare("SELECT (.+) FROM users WHERE (.+)")
+	expected := NewResult(1, 1)
+	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").
+		WillReturnResult(expected)
+	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WillReturnRows(expectedRows)
+
+	got, err := mock.(*sqlmock).Prepare(query)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if got == nil {
+		t.Error("Prepare () stmt must not be nil")
+		return
+	}
+	result, err := got.Exec([]driver.Value{"test"})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Eesults not equal. Expected: %v, Actual: %v", expected, result)
+		return
+	}
+	rows, err := got.Query([]driver.Value{"test"})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer rows.Close()
 }

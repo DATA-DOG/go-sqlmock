@@ -1250,7 +1250,7 @@ func Test_sqlmock_Prepare_and_Exec(t *testing.T) {
 		return
 	}
 	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("Eesults not equal. Expected: %v, Actual: %v", expected, result)
+		t.Errorf("Results are not equal. Expected: %v, Actual: %v", expected, result)
 		return
 	}
 	rows, err := got.Query([]driver.Value{"test"})

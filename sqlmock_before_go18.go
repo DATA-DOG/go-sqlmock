@@ -4,7 +4,9 @@ package sqlmock
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"log"
+	"time"
 )
 
 type namedValue struct {

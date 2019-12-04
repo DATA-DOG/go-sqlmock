@@ -5,9 +5,7 @@ package sqlmock
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -639,85 +637,5 @@ func TestPingExpectationsContextTimeout(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Errorf("expected Ping to return after context timeout, but it did not in a timely fashion")
-	}
-}
-
-type failArgument struct{}
-
-func (f failArgument) Match(_ driver.Value) bool {
-	return false
-}
-
-func Test_sqlmock_Exec(t *testing.T) {
-	db, mock, err := New()
-	if err != nil {
-		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-
-	mock.ExpectBegin()
-	_, err = mock.(*sqlmock).Exec("", []driver.Value{})
-	if err == nil {
-		t.Errorf("error expected")
-		return
-	}
-
-	expected := NewResult(1, 1)
-	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").
-		WillReturnResult(expected).
-		WithArgs("test")
-
-	matchErr := errors.New("matcher sqlmock.failArgument could not match 0 argument driver.NamedValue - {Name: Ordinal:1 Value:{}}")
-	mock.ExpectExec("SELECT (.+) FROM animals WHERE (.+)").
-		WillReturnError(matchErr).
-		WithArgs(failArgument{})
-
-	mock.ExpectExec("").WithArgs(failArgument{})
-
-	mock.(*sqlmock).expected = mock.(*sqlmock).expected[1:]
-	query := "SELECT name, email FROM users WHERE name = ?"
-	result, err := mock.(*sqlmock).Exec(query, []driver.Value{"test"})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("Results are not equal. Expected: %v, Actual: %v", expected, result)
-		return
-	}
-
-	failQuery := "SELECT name, sex FROM animals WHERE sex = ?"
-	_, err = mock.(*sqlmock).Exec(failQuery, []driver.Value{failArgument{}})
-	if err == nil {
-		t.Errorf("error expected")
-		return
-	}
-	mock.(*sqlmock).ordered = false
-	_, err = mock.(*sqlmock).Exec("", []driver.Value{failArgument{}})
-	if err == nil {
-		t.Errorf("error expected")
-		return
-	}
-}
-
-func Test_sqlmock_Query(t *testing.T) {
-	db, mock, err := New()
-	if err != nil {
-		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WillReturnRows(expectedRows)
-	query := "SELECT name, email FROM users WHERE name = ?"
-	rows, err := mock.(*sqlmock).Query(query, []driver.Value{"test"})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer rows.Close()
-	_, err = mock.(*sqlmock).Query(query, []driver.Value{failArgument{}})
-	if err == nil {
-		t.Errorf("error expected")
-		return
 	}
 }

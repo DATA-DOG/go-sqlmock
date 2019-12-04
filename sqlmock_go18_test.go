@@ -642,6 +642,12 @@ func TestPingExpectationsContextTimeout(t *testing.T) {
 	}
 }
 
+type failArgument struct{}
+
+func (f failArgument) Match(_ driver.Value) bool {
+	return false
+}
+
 func Test_sqlmock_Exec(t *testing.T) {
 	db, mock, err := New()
 	if err != nil {
@@ -652,7 +658,12 @@ func Test_sqlmock_Exec(t *testing.T) {
 
 	expected := NewResult(1, 1)
 	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").
-		WillReturnResult(expected)
+		WillReturnResult(expected).
+		WithArgs("test")
+
+	mock.ExpectExec("SELECT (.+) FROM animals WHERE (.+)").
+		WillReturnError(errors.New("matcher %T could not match %d argument %T - %+v")).
+		WithArgs(failArgument{})
 
 	result, err := mock.(*sqlmock).Exec(query, []driver.Value{"test"})
 	if err != nil {
@@ -661,6 +672,12 @@ func Test_sqlmock_Exec(t *testing.T) {
 	}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Results are not equal. Expected: %v, Actual: %v", expected, result)
+		return
+	}
+
+	_, err = mock.(*sqlmock).Exec(query, []driver.Value{failArgument{}})
+	if err == nil {
+		t.Errorf("error expected")
 		return
 	}
 }

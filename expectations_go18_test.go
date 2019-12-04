@@ -155,3 +155,20 @@ func TestQueryExpectationNamedArgComparison(t *testing.T) {
 		t.Errorf("arguments should have matched, but it did not: %v", err)
 	}
 }
+
+type panicConverter struct {
+}
+
+func (s panicConverter) ConvertValue(v interface{}) (driver.Value, error) {
+	panic(v)
+}
+
+func Test_queryBasedExpectation_attemptArgMatch(t *testing.T) {
+	e := &queryBasedExpectation{converter: new(panicConverter), args: []driver.Value{"test"}}
+	values := []driver.NamedValue{
+		{Ordinal: 1, Name: "test", Value: "test"},
+	}
+	if err := e.attemptArgMatch(values); err == nil {
+		t.Errorf("error expected")
+	}
+}

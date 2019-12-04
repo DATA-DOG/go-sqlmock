@@ -99,3 +99,20 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 		t.Error("arguments should not match, since argument is different")
 	}
 }
+
+type panicConverter struct {
+}
+
+func (s panicConverter) ConvertValue(v interface{}) (driver.Value, error) {
+	panic(v)
+}
+
+func Test_queryBasedExpectation_attemptArgMatch(t *testing.T) {
+	e := &queryBasedExpectation{converter: new(panicConverter), args: []driver.Value{"test"}}
+	values := []namedValue{
+		{Ordinal: 1, Name: "test", Value: "test"},
+	}
+	if err := e.attemptArgMatch(values); err == nil {
+		t.Errorf("error expected")
+	}
+}

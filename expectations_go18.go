@@ -4,6 +4,7 @@ package sqlmock
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 )
@@ -19,7 +20,7 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 	return e
 }
 
-func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
+func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 	if nil == e.args {
 		return nil
 	}
@@ -58,4 +59,19 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 		}
 	}
 	return nil
+}
+
+func (e *queryBasedExpectation) attemptArgMatch(args []driver.NamedValue) (err error) {
+	// catch panic
+	defer func() {
+		if e := recover(); e != nil {
+			_, ok := e.(error)
+			if !ok {
+				err = fmt.Errorf(e.(string))
+			}
+		}
+	}()
+
+	err = e.argsMatches(args)
+	return
 }

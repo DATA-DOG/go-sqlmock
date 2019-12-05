@@ -50,3 +50,18 @@ func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 	}
 	return nil
 }
+
+func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
+	// catch panic
+	defer func() {
+		if e := recover(); e != nil {
+			_, ok := e.(error)
+			if !ok {
+				err = fmt.Errorf(e.(string))
+			}
+		}
+	}()
+
+	err = e.argsMatches(args)
+	return
+}

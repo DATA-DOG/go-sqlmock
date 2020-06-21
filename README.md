@@ -21,6 +21,11 @@ maintain correct **TDD** workflow.
 interface, you will need to switch it to a pointer struct type. Also, **sqlmock.Rows** were used to implement **driver.Rows**
 interface, which was not required or useful for mocking and was removed. Hope it will not cause issues.
 
+## Looking for maintainers
+
+I do not have much spare time for this library and willing to transfer the repository ownership
+to person or an organization motivated to maintain it. Open up a conversation if you are interested. See #230.
+
 ## Install
 
     go get github.com/DATA-DOG/go-sqlmock

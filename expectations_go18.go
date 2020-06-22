@@ -12,11 +12,19 @@ import (
 // WillReturnRows specifies the set of resulting rows that will be returned
 // by the triggered query
 func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
+	defs := 0
 	sets := make([]*Rows, len(rows))
 	for i, r := range rows {
 		sets[i] = r
+		if r.def != nil {
+			defs++
+		}
 	}
-	e.rows = &rowSets{sets: sets, ex: e}
+	if defs > 0 && defs == len(sets) {
+		e.rows = &rowSetsWithDefinition{&rowSets{sets: sets, ex: e}}
+	} else {
+		e.rows = &rowSets{sets: sets, ex: e}
+	}
 	return e
 }
 

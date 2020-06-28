@@ -120,6 +120,7 @@ func (rs *rowSets) invalidateRaw() {
 type Rows struct {
 	converter driver.ValueConverter
 	cols      []string
+	def       []*Column
 	rows      [][]driver.Value
 	pos       int
 	nextErr   map[int]error

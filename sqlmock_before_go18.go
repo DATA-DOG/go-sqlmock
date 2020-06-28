@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+// Sqlmock interface for Go up to 1.7
+type Sqlmock interface {
+	// Embed common methods
+	SqlmockCommon
+}
+
 type namedValue struct {
 	Name    string
 	Ordinal int

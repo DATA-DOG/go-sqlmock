@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"reflect"
 	"strconv"
 	"sync"
@@ -13,6 +14,16 @@ import (
 )
 
 func cancelOrder(db *sql.DB, orderID int) error {
+	tx, _ := db.Begin()
+	_, _ = tx.Query("SELECT * FROM orders {0} FOR UPDATE", orderID)
+	err := tx.Rollback()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func cancelOrderSQLX(db *sqlx.DB, orderID int) error {
 	tx, _ := db.Begin()
 	_, _ = tx.Query("SELECT * FROM orders {0} FOR UPDATE", orderID)
 	err := tx.Rollback()
@@ -44,6 +55,40 @@ func Example() {
 	someOrderID := 1
 	// call a function which executes expected database operations
 	err = cancelOrder(db, someOrderID)
+	if err != nil {
+		fmt.Printf("unexpected error: %s", err)
+		return
+	}
+
+	// ensure all expectations have been met
+	if err = mock.ExpectationsWereMet(); err != nil {
+		fmt.Printf("unmet expectation error: %s", err)
+	}
+	// Output:
+}
+
+func ExampleSQLX() {
+	// Open new mock database
+	db, mock, err := Newx()
+	if err != nil {
+		fmt.Println("error creating mock database")
+		return
+	}
+	// columns to be used for result
+	columns := []string{"id", "status"}
+	// expect transaction begin
+	mock.ExpectBegin()
+	// expect query to fetch order, match it with regexp
+	mock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE").
+		WithArgs(1).
+		WillReturnRows(NewRows(columns).AddRow(1, 1))
+	// expect transaction rollback, since order status is "cancelled"
+	mock.ExpectRollback()
+
+	// run the cancel order function
+	someOrderID := 1
+	// call a function which executes expected database operations
+	err = cancelOrderSQLX(db, someOrderID)
 	if err != nil {
 		fmt.Printf("unexpected error: %s", err)
 		return
@@ -1198,6 +1243,53 @@ func TestQueryWithTimeout(t *testing.T) {
 }
 
 func queryWithTimeout(t time.Duration, db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
+	rowsChan := make(chan *sql.Rows, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		rowsChan <- rows
+	}()
+
+	select {
+	case rows := <-rowsChan:
+		return rows, nil
+	case err := <-errChan:
+		return nil, err
+	case <-time.After(t):
+		return nil, fmt.Errorf("query timed out after %v", t)
+	}
+}
+
+func TestQueryWithTimeoutSQLX(t *testing.T) {
+	db, mock, err := Newx()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+
+	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+		WillDelayFor(15 * time.Millisecond). // Query will take longer than timeout
+		WithArgs(5).
+		WillReturnRows(rs)
+
+	_, err = queryWithTimeoutSQLX(10*time.Millisecond, db, "SELECT (.+) FROM articles WHERE id = ?", 5)
+	if err == nil {
+		t.Errorf("expecting query to time out")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func queryWithTimeoutSQLX(t time.Duration, db *sqlx.DB, query string, args ...interface{}) (*sql.Rows, error) {
 	rowsChan := make(chan *sql.Rows, 1)
 	errChan := make(chan error, 1)
 

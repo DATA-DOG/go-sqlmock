@@ -14,6 +14,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"time"
 )
 
@@ -100,6 +101,35 @@ type sqlmock struct {
 
 func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	db, err := sql.Open("sqlmock", c.dsn)
+	if err != nil {
+		return db, c, err
+	}
+	for _, option := range options {
+		err := option(c)
+		if err != nil {
+			return db, c, err
+		}
+	}
+	if c.converter == nil {
+		c.converter = driver.DefaultParameterConverter
+	}
+	if c.queryMatcher == nil {
+		c.queryMatcher = QueryMatcherRegexp
+	}
+
+	if c.monitorPings {
+		// We call Ping on the driver shortly to verify startup assertions by
+		// driving internal behaviour of the sql standard library. We don't
+		// want this call to ping to be monitored for expectation purposes so
+		// temporarily disable.
+		c.monitorPings = false
+		defer func() { c.monitorPings = true }()
+	}
+	return db, c, db.Ping()
+}
+
+func (c *sqlmock) openx(options []func(*sqlmock) error) (*sqlx.DB, Sqlmock, error) {
+	db, err := sqlx.Open("sqlmock", c.dsn)
 	if err != nil {
 		return db, c, err
 	}

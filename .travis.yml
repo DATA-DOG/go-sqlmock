@@ -21,7 +21,7 @@ go:
   - 1.14.x
   - 1.15.x
 # the vesions were excluded since ppc64le has no support for those versions  
-  jobs: 
+jobs: 
   exclude:
     - arch: ppc64le
       go: 1.2.x

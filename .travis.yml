@@ -20,6 +20,28 @@ go:
   - 1.13.x
   - 1.14.x
   - 1.15.x
+# the vesions were excluded since ppc64le has no support for those versions  
+  jobs: 
+  exclude:
+    - arch: ppc64le
+      go: 1.2.x
+    - arch: ppc64le
+      go: 1.3.x
+    - arch: ppc64le
+      go: 1.4      
+    - arch: ppc64le
+      go: 1.5.x
+    - arch: ppc64le
+      go: 1.6.x
+    - arch: ppc64le
+      go: 1.7.x
+    - arch: ppc64le
+      go: 1.8.x
+    - arch: ppc64le
+      go: 1.9.x
+    - arch: ppc64le
+      go: 1.10.x
+
 
 script:
   - go vet

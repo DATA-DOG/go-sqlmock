@@ -54,7 +54,7 @@ import (
 )
 
 func recordStats(db *sql.DB, userID, productID int64) (err error) {
-	tx, err = db.Begin()
+	tx, err := db.Begin()
 	if err != nil {
 		return
 	}

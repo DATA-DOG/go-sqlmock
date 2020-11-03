@@ -2,6 +2,10 @@ language: go
 
 go_import_path: github.com/DATA-DOG/go-sqlmock
 
+arch:
+  - AMD64
+  - ppc64le
+
 go:
   - 1.2.x
   - 1.3.x
@@ -17,6 +21,30 @@ go:
   - 1.13.x
   - 1.14.x
   - 1.15.x
+
+# Disable version 1.2.x, 1.3.x, 1.4, 1.5.x, 1.6.x, 1.7.x, 1.8.x, 1.9.x, 1.10.x & 1.11.x
+jobs: 
+  exclude:
+    - arch: ppc64le
+      go: 1.2.x
+    - arch: ppc64le
+      go: 1.3.x
+    - arch: ppc64le
+      go: 1.4
+    - arch: ppc64le
+      go: 1.5.x
+    - arch: ppc64le
+      go: 1.6.x
+    - arch: ppc64le
+      go: 1.7.x
+    - arch: ppc64le
+      go: 1.8.x
+    - arch: ppc64le
+      go: 1.9.x
+    - arch: ppc64le
+      go: 1.10.x
+    - arch: ppc64le
+      go: 1.11.x 
 
 script:
   - go vet

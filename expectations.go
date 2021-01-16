@@ -230,12 +230,13 @@ func (e *ExpectedExec) String() string {
 	}
 
 	if e.result != nil {
-		res, _ := e.result.(*result)
-		msg += "\n  - should return Result having:"
-		msg += fmt.Sprintf("\n      LastInsertId: %d", res.insertID)
-		msg += fmt.Sprintf("\n      RowsAffected: %d", res.rowsAffected)
-		if res.err != nil {
-			msg += fmt.Sprintf("\n      Error: %s", res.err)
+		if res, ok := e.result.(*result); ok {
+			msg += "\n  - should return Result having:"
+			msg += fmt.Sprintf("\n      LastInsertId: %d", res.insertID)
+			msg += fmt.Sprintf("\n      RowsAffected: %d", res.rowsAffected)
+			if res.err != nil {
+				msg += fmt.Sprintf("\n      Error: %s", res.err)
+			}
 		}
 	}
 

@@ -222,7 +222,7 @@ func (e *ExpectedExec) String() string {
 		msg += "\n  - is without arguments"
 	} else {
 		msg += "\n  - is with arguments:\n"
-		var margs []string
+		margs := make([]string, 0, len(e.args))
 		for i, arg := range e.args {
 			margs = append(margs, fmt.Sprintf("    %d - %+v", i, arg))
 		}

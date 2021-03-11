@@ -246,7 +246,9 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	}
 
 	expected.times -= 1
-	expected.resetRows()
+	if expected.rows != nil {
+		expected.resetRows()
+	}
 	if expected.err != nil {
 		return expected, expected.err // mocked to return error
 	}

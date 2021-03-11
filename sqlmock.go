@@ -202,8 +202,8 @@ func (c *sqlmock) ExpectationsWereMet() error {
 		}
 
 		// must check whether all expected queried rows are closed
-		if query, ok := e.(*ExpectedQuery); ok {
-			if query.rowsMustBeClosed && !query.rowsWereClosed {
+		if query, ok := e.(*ExpectedQuery); ok && query.rows != nil {
+			if query.rows.MustBeClosed() && !query.rows.AreClosed() {
 				return fmt.Errorf("expected query rows to be closed, but it was not: %s", query)
 			}
 		}

@@ -31,7 +31,9 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 }
 
 func (e *ExpectedQuery) resetRows() {
+	closed := e.rows.MustBeClosed()
 	e = e.WillReturnRows(e.mockedRows...)
+	e.rows.WillBeClosed(closed)
 }
 
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {

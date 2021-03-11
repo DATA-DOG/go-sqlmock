@@ -140,7 +140,8 @@ func TestContextExec(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectExec("DELETE FROM users").
-		WillReturnResult(NewResult(1, 1)).Times(3)
+		WillReturnResult(NewResult(1, 1)).
+		Times(3)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

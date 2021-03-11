@@ -120,16 +120,24 @@ func (e *ExpectedRollback) String() string {
 	return msg
 }
 
+type mockRows interface {
+	driver.Rows
+
+	WillBeClosed(closed bool)
+
+	AreClosed() bool
+
+	MustBeClosed() bool
+}
+
 // ExpectedQuery is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
 // *sql.Tx.QueryRow, *sql.Stmt.Query or *sql.Stmt.QueryRow expectations.
 // Returned by *Sqlmock.ExpectQuery.
 type ExpectedQuery struct {
 	queryBasedExpectation
-	rows             driver.Rows
-	mockedRows       []*Rows
-	delay            time.Duration
-	rowsMustBeClosed bool
-	rowsWereClosed   bool
+	rows       mockRows
+	mockedRows []*Rows
+	delay      time.Duration
 }
 
 // WithArgs will match given expected args to actual database query arguments.
@@ -142,7 +150,7 @@ func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
 
 // RowsWillBeClosed expects this query rows to be closed.
 func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
-	e.rowsMustBeClosed = true
+	e.rows.WillBeClosed(true)
 	return e
 }
 

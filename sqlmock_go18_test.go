@@ -140,7 +140,7 @@ func TestContextExec(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectExec("DELETE FROM users").
-		WillReturnResult(NewResult(1, 1))
+		WillReturnResult(NewResult(1, 1)).Times(3)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -149,18 +149,20 @@ func TestContextExec(t *testing.T) {
 		cancel()
 	}()
 
-	res, err := db.ExecContext(ctx, "DELETE FROM users")
-	if err != nil {
-		t.Errorf("error was not expected, but got: %v", err)
-	}
+	for i := 0; i < 3; i++ {
+		res, err := db.ExecContext(ctx, "DELETE FROM users")
+		if err != nil {
+			t.Errorf("error was not expected, but got: %v", err)
+		}
 
-	affected, err := res.RowsAffected()
-	if affected != 1 {
-		t.Errorf("expected affected rows 1, but got %v", affected)
-	}
+		affected, err := res.RowsAffected()
+		if affected != 1 {
+			t.Errorf("expected affected rows 1, but got %v", affected)
+		}
 
-	if err != nil {
-		t.Errorf("error was not expected, but got: %v", err)
+		if err != nil {
+			t.Errorf("error was not expected, but got: %v", err)
+		}
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -269,22 +271,25 @@ func TestContextQuery(t *testing.T) {
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id =").
 		WithArgs(sql.Named("id", 5)).
 		WillDelayFor(time.Millisecond * 3).
+		Times(3).
 		WillReturnRows(rs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond * 30)
 		cancel()
 	}()
 
-	rows, err := db.QueryContext(ctx, "SELECT id, title FROM articles WHERE id = :id", sql.Named("id", 5))
-	if err != nil {
-		t.Errorf("error was not expected, but got: %v", err)
-	}
+	for i := 0; i < 3; i++ {
+		rows, err := db.QueryContext(ctx, "SELECT id, title FROM articles WHERE id = :id", sql.Named("id", 5))
+		if err != nil {
+			t.Errorf("error was not expected, but got: %v", err)
+		}
 
-	if !rows.Next() {
-		t.Error("expected one row, but there was none")
+		if !rows.Next() {
+			t.Error("expected one row, but there was none")
+		}
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

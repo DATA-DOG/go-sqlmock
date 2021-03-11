@@ -148,7 +148,7 @@ func (c *sqlmock) ping() (*ExpectedPing, error) {
 		return nil, fmt.Errorf(msg)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	expected.Unlock()
 	return expected, expected.err
 }
@@ -245,7 +245,8 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 		return nil, fmt.Errorf("Query '%s', arguments do not match: %s", query, err)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
+	expected.resetRows()
 	if expected.err != nil {
 		return expected, expected.err // mocked to return error
 	}
@@ -327,7 +328,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	if expected.err != nil {
 		return expected, expected.err // mocked to return error
 	}

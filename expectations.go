@@ -20,12 +20,12 @@ type expectation interface {
 // satisfies the expectation interface
 type commonExpectation struct {
 	sync.Mutex
-	triggered bool
-	err       error
+	times int
+	err   error
 }
 
 func (e *commonExpectation) fulfilled() bool {
-	return e.triggered
+	return e.times == -1
 }
 
 // ExpectedClose is used to manage *sql.DB.Close expectation
@@ -126,6 +126,7 @@ func (e *ExpectedRollback) String() string {
 type ExpectedQuery struct {
 	queryBasedExpectation
 	rows             driver.Rows
+	mockedRows       []*Rows
 	delay            time.Duration
 	rowsMustBeClosed bool
 	rowsWereClosed   bool
@@ -155,6 +156,11 @@ func (e *ExpectedQuery) WillReturnError(err error) *ExpectedQuery {
 // result. May be used together with Context
 func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
 	e.delay = duration
+	return e
+}
+
+func (e *ExpectedQuery) Times(times int) *ExpectedQuery {
+	e.times = times - 1
 	return e
 }
 
@@ -210,6 +216,11 @@ func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
 // result. May be used together with Context
 func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 	e.delay = duration
+	return e
+}
+
+func (e *ExpectedExec) Times(times int) *ExpectedExec {
+	e.times = times - 1
 	return e
 }
 

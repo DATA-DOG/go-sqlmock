@@ -64,5 +64,6 @@ var QueryMatcherEqual QueryMatcher = QueryMatcherFunc(func(expectedSQL, actualSQ
 	if actual != expect {
 		return fmt.Errorf(`actual sql: "%s" does not equal to expected "%s"`, actual, expect)
 	}
-	return nil
+	return
 })
+

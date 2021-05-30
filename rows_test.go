@@ -717,7 +717,7 @@ func TestAddRows(t *testing.T) {
 	// scanned id: 4 and title: Emily
 }
 
-func ExampleMultiRows() {
+func ExampleRows_AddRows() {
 	db, mock, err := New()
 	if err != nil {
 		fmt.Println("failed to open sqlmock database:", err)

@@ -3,6 +3,7 @@ package sqlmock
 import (
 	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"testing"
 )
@@ -669,4 +670,86 @@ func queryRowBytesNotInvalidatedByClose(t *testing.T, rows *Rows, scan func(*sql
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestAddRows(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	values := [][]driver.Value{
+		{
+			1, "John",
+		},
+		{
+			2, "Jane",
+		},
+		{
+			3, "Peter",
+		},
+		{
+			4, "Emily",
+		},
+	}
+
+	rows := NewRows([]string{"id", "name"}).AddRows(values...)
+	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+
+	rs, _ := db.Query("SELECT")
+	defer rs.Close()
+
+	for rs.Next() {
+		var id int
+		var name string
+		rs.Scan(&id, &name)
+		fmt.Println("scanned id:", id, "and name:", name)
+	}
+
+	if rs.Err() != nil {
+		fmt.Println("got rows error:", rs.Err())
+	}
+	// Output: scanned id: 1 and title: John
+	// scanned id: 2 and title: Jane
+	// scanned id: 3 and title: Peter
+	// scanned id: 4 and title: Emily
+}
+
+func ExampleMultiRows() {
+	db, mock, err := New()
+	if err != nil {
+		fmt.Println("failed to open sqlmock database:", err)
+	}
+	defer db.Close()
+
+	values := [][]driver.Value{
+		{
+			1, "one",
+		},
+		{
+			2, "two",
+		},
+	}
+
+	rows := NewRows([]string{"id", "title"}).AddRows(values...)
+
+	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+
+	rs, _ := db.Query("SELECT")
+	defer rs.Close()
+
+	for rs.Next() {
+		var id int
+		var title string
+		rs.Scan(&id, &title)
+		fmt.Println("scanned id:", id, "and title:", title)
+	}
+
+	if rs.Err() != nil {
+		fmt.Println("got rows error:", rs.Err())
+	}
+	// Output: scanned id: 1 and title: one
+	// scanned id: 2 and title: two
 }

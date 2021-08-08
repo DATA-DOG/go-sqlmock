@@ -1,5 +1,4 @@
-package sqlmock
-
+Jaz
 import (
 	"bytes"
 	"database/sql/driver"
@@ -207,6 +206,5 @@ func (r *Rows) FromCSVString(s string) *Rows {
 			row[i] = CSVColumnParser(strings.TrimSpace(v))
 		}
 		r.rows = append(r.rows, row)
-	}
-	return r
+
 }

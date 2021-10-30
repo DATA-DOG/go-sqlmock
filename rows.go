@@ -188,6 +188,16 @@ func (r *Rows) AddRow(values ...driver.Value) *Rows {
 	return r
 }
 
+// AddRows adds multiple rows composed from database driver.Value slice and
+// returns the same instance to perform subsequent actions.
+func (r *Rows) AddRows(values ...[]driver.Value) *Rows {
+	for _, value := range values {
+		r.AddRow(value...)
+	}
+
+	return r
+}
+
 // FromCSVString build rows from csv string.
 // return the same instance to perform subsequent actions.
 // Note that the number of values must match the number

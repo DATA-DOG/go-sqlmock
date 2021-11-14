@@ -145,6 +145,11 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 			if expected, ok = next.(*ExpectedExec); ok {
 				break
 			}
+            // Countermeasure for
+            // https://github.com/DATA-DOG/go-sqlmock/issues/239
+			if expected, ok = next.(*ExpectedQuery); ok {
+				break
+			}
 			next.Unlock()
 			return nil, fmt.Errorf("call to ExecQuery '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}

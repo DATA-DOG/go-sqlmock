@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 const invalid = `☠☠☠ MEMORY OVERWRITTEN ☠☠☠ `
@@ -752,4 +754,53 @@ func ExampleRows_AddRows() {
 	}
 	// Output: scanned id: 1 and title: one
 	// scanned id: 2 and title: two
+}
+
+type MockStruct struct {
+	Type       int       `mock:"type"`
+	Name       string    `mock:"name"`
+	CreateTime time.Time `mock:"createTime"`
+}
+
+func TestNewRowsFromStruct(t *testing.T) {
+	m := &MockStruct{
+		Type:       1,
+		Name:       "sqlMock",
+		CreateTime: time.Now(),
+	}
+	excepted := NewRows([]string{"type", "name", "createTime"}).AddRow(m.Type, m.Name, m.CreateTime)
+
+	actual, err := NewRowsFromStruct(m, "mock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.EqualValues(t, excepted.cols, actual.cols)
+	assert.EqualValues(t, excepted.rows, actual.rows)
+	assert.EqualValues(t, excepted.def, actual.def)
+}
+
+func TestNewRowsFromStructs(t *testing.T) {
+	m1 := &MockStruct{
+		Type:       1,
+		Name:       "sqlMock1",
+		CreateTime: time.Now(),
+	}
+	m2 := &MockStruct{
+		Type:       2,
+		Name:       "sqlMock2",
+		CreateTime: time.Now(),
+	}
+	arr := []*MockStruct{m1, m2}
+
+	excepted := NewRows([]string{"type", "name", "createTime"})
+	for _, v := range arr {
+		excepted.AddRow(v.Type, v.Name, v.CreateTime)
+	}
+	actual, err := NewRowsFromStructs("mock", m1, m2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.EqualValues(t, excepted.cols, actual.cols)
+	assert.EqualValues(t, excepted.rows, actual.rows)
+	assert.EqualValues(t, excepted.def, actual.def)
 }

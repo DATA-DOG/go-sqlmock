@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
+	"time"
 )
 
 const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
@@ -125,6 +128,133 @@ type Rows struct {
 	pos       int
 	nextErr   map[int]error
 	closeErr  error
+}
+
+// NewRowsFromStruct new Rows from struct reflect with tagName
+// tagName default "json"
+func NewRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
+	if m == nil {
+		return nil, errors.New("param m is nil")
+	}
+	val := reflect.ValueOf(m).Elem()
+	if val.Kind() != reflect.Struct {
+		return nil, errors.New("param type must be struct")
+	}
+	num := val.NumField()
+	if num == 0 {
+		return nil, errors.New("no properties available")
+	}
+	columns := make([]string, 0, num)
+	var values []driver.Value
+	tag := "json"
+	if len(tagName) > 0 {
+		tag = tagName[0]
+	}
+	for i := 0; i < num; i++ {
+		f := val.Type().Field(i)
+		column := f.Tag.Get(tag)
+		if len(column) > 0 {
+			columns = append(columns, column)
+			values = append(values, val.Field(i))
+		}
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("tag not match")
+	}
+	rows := &Rows{
+		cols:      columns,
+		nextErr:   make(map[int]error),
+		converter: reflectTypeConverter{},
+	}
+	return rows.AddRow(values...), nil
+}
+
+var timeKind = reflect.TypeOf(time.Time{}).Kind()
+
+type reflectTypeConverter struct{}
+
+func (reflectTypeConverter) ConvertValue(v interface{}) (driver.Value, error) {
+	rv := v.(reflect.Value)
+	switch rv.Kind() {
+	case reflect.Ptr:
+		// indirect pointers
+		if rv.IsNil() {
+			return nil, nil
+		} else {
+			return driver.DefaultParameterConverter.ConvertValue(rv.Elem().Interface())
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int(), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		return int64(rv.Uint()), nil
+	case reflect.Uint64:
+		u64 := rv.Uint()
+		if u64 >= 1<<63 {
+			return nil, fmt.Errorf("uint64 values with high bit set are not supported")
+		}
+		return int64(u64), nil
+	case reflect.Float32, reflect.Float64:
+		return rv.Float(), nil
+	case reflect.Bool:
+		return rv.Bool(), nil
+	case reflect.Slice:
+		ek := rv.Type().Elem().Kind()
+		if ek == reflect.Uint8 {
+			return rv.Bytes(), nil
+		}
+		return nil, fmt.Errorf("unsupported type %T, a slice of %s", v, ek)
+	case reflect.String:
+		return rv.String(), nil
+	case timeKind:
+		return rv.Interface().(time.Time), nil
+	}
+	return nil, fmt.Errorf("unsupported type %T, a %s", v, rv.Kind())
+}
+
+// NewRowsFromStructs new Rows from struct slice reflect with tagName
+// NOTE: arr must be of the same type
+// tagName default "json"
+func NewRowsFromStructs(tagName string, arr ...interface{}) (*Rows, error) {
+	if len(arr) == 0 {
+		return nil, errors.New("param arr is nil")
+	}
+	typ := reflect.TypeOf(arr[0]).Elem()
+	if typ.Kind() != reflect.Struct {
+		return nil, errors.New("param type must be struct")
+	}
+	if typ.NumField() == 0 {
+		return nil, errors.New("no properties available")
+	}
+	var columns []string
+	tag := "json"
+	if len(tagName) > 0 {
+		tag = tagName
+	}
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		column := f.Tag.Get(tag)
+		if len(column) > 0 {
+			columns = append(columns, column)
+		}
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("tag not match")
+	}
+	rows := &Rows{
+		cols:      columns,
+		nextErr:   make(map[int]error),
+		converter: reflectTypeConverter{},
+	}
+	for _, m := range arr {
+		v := m
+		val := reflect.ValueOf(v).Elem()
+		var values []driver.Value
+		for _, column := range columns {
+			values = append(values, val.FieldByName(column))
+		}
+		rows.AddRow(values...)
+	}
+	return rows, nil
 }
 
 // NewRows allows Rows to be created from a

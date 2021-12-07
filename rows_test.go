@@ -796,7 +796,7 @@ func TestNewRowsFromStructs(t *testing.T) {
 	for _, v := range arr {
 		excepted.AddRow(v.Type, v.Name, v.CreateTime)
 	}
-	actual, err := NewRowsFromStructs("mock", m1, m2)
+	actual, err := NewRowsFromStructs("mock", arr[0],arr[1])
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,6 @@ import (
 	"io"
 	"reflect"
 	"strings"
-	"time"
 )
 
 const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
@@ -155,7 +154,7 @@ func NewRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
 		column := f.Tag.Get(tag)
 		if len(column) > 0 {
 			columns = append(columns, column)
-			values = append(values, val.Field(i))
+			values = append(values, val.Field(i).Interface())
 		}
 	}
 	if len(columns) == 0 {
@@ -164,51 +163,9 @@ func NewRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
 	rows := &Rows{
 		cols:      columns,
 		nextErr:   make(map[int]error),
-		converter: reflectTypeConverter{},
+		converter: driver.DefaultParameterConverter,
 	}
 	return rows.AddRow(values...), nil
-}
-
-var timeKind = reflect.TypeOf(time.Time{}).Kind()
-
-type reflectTypeConverter struct{}
-
-func (reflectTypeConverter) ConvertValue(v interface{}) (driver.Value, error) {
-	rv := v.(reflect.Value)
-	switch rv.Kind() {
-	case reflect.Ptr:
-		// indirect pointers
-		if rv.IsNil() {
-			return nil, nil
-		} else {
-			return driver.DefaultParameterConverter.ConvertValue(rv.Elem().Interface())
-		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return rv.Int(), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
-		return int64(rv.Uint()), nil
-	case reflect.Uint64:
-		u64 := rv.Uint()
-		if u64 >= 1<<63 {
-			return nil, fmt.Errorf("uint64 values with high bit set are not supported")
-		}
-		return int64(u64), nil
-	case reflect.Float32, reflect.Float64:
-		return rv.Float(), nil
-	case reflect.Bool:
-		return rv.Bool(), nil
-	case reflect.Slice:
-		ek := rv.Type().Elem().Kind()
-		if ek == reflect.Uint8 {
-			return rv.Bytes(), nil
-		}
-		return nil, fmt.Errorf("unsupported type %T, a slice of %s", v, ek)
-	case reflect.String:
-		return rv.String(), nil
-	case timeKind:
-		return rv.Interface().(time.Time), nil
-	}
-	return nil, fmt.Errorf("unsupported type %T, a %s", v, rv.Kind())
 }
 
 // NewRowsFromStructs new Rows from struct slice reflect with tagName
@@ -226,15 +183,18 @@ func NewRowsFromStructs(tagName string, arr ...interface{}) (*Rows, error) {
 		return nil, errors.New("no properties available")
 	}
 	var columns []string
+	var idx []int
 	tag := "json"
 	if len(tagName) > 0 {
 		tag = tagName
 	}
+
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		column := f.Tag.Get(tag)
 		if len(column) > 0 {
 			columns = append(columns, column)
+			idx = append(idx, i)
 		}
 	}
 	if len(columns) == 0 {
@@ -243,14 +203,15 @@ func NewRowsFromStructs(tagName string, arr ...interface{}) (*Rows, error) {
 	rows := &Rows{
 		cols:      columns,
 		nextErr:   make(map[int]error),
-		converter: reflectTypeConverter{},
+		converter: driver.DefaultParameterConverter,
 	}
+
 	for _, m := range arr {
-		v := m
-		val := reflect.ValueOf(v).Elem()
+		val := reflect.ValueOf(m).Elem()
 		var values []driver.Value
-		for _, column := range columns {
-			values = append(values, val.FieldByName(column))
+		for _, i := range idx {
+			// NOTE: field by name ptr nil
+			values = append(values, val.Field(i).Interface())
 		}
 		rows.AddRow(values...)
 	}

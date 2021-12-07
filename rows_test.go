@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -774,9 +774,14 @@ func TestNewRowsFromStruct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.EqualValues(t, excepted.cols, actual.cols)
-	assert.EqualValues(t, excepted.rows, actual.rows)
-	assert.EqualValues(t, excepted.def, actual.def)
+	same := reflect.DeepEqual(excepted.cols, actual.cols)
+	if !same {
+		t.Fatal("custom tag reflect failed")
+	}
+	same = reflect.DeepEqual(excepted.rows, actual.rows)
+	if !same {
+		t.Fatal("reflect value from tag failed")
+	}
 }
 
 func TestNewRowsFromStructs(t *testing.T) {
@@ -796,11 +801,16 @@ func TestNewRowsFromStructs(t *testing.T) {
 	for _, v := range arr {
 		excepted.AddRow(v.Type, v.Name, v.CreateTime)
 	}
-	actual, err := NewRowsFromStructs("mock", arr[0],arr[1])
+	actual, err := NewRowsFromStructs("mock", arr[0], arr[1])
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.EqualValues(t, excepted.cols, actual.cols)
-	assert.EqualValues(t, excepted.rows, actual.rows)
-	assert.EqualValues(t, excepted.def, actual.def)
+	same := reflect.DeepEqual(excepted.cols, actual.cols)
+	if !same {
+		t.Fatal("custom tag reflect failed")
+	}
+	same = reflect.DeepEqual(excepted.rows, actual.rows)
+	if !same {
+		t.Fatal("reflect value from tag failed")
+	}
 }

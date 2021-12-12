@@ -131,14 +131,14 @@ type Rows struct {
 
 // NewRowsFromStruct new Rows from struct reflect with tagName
 // tagName default "json"
-func NewRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
-	if m == nil {
+func newRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
+	/*	if m == nil {
 		return nil, errors.New("param m is nil")
-	}
+	}*/
 	val := reflect.ValueOf(m).Elem()
-	if val.Kind() != reflect.Struct {
+	/*	if val.Kind() != reflect.Struct {
 		return nil, errors.New("param type must be struct")
-	}
+	}*/
 	num := val.NumField()
 	if num == 0 {
 		return nil, errors.New("no properties available")
@@ -168,27 +168,46 @@ func NewRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
 	return rows.AddRow(values...), nil
 }
 
+// NewRowsFromInterface new Rows from struct or slice or array reflect with tagName
+// NOTE: arr/slice must be of the same type
+// tagName default "json"
+func NewRowsFromInterface(m interface{}, tagName string) (*Rows, error) {
+	kind := reflect.TypeOf(m).Elem().Kind()
+	if kind == reflect.Ptr {
+		kind = reflect.TypeOf(m).Kind()
+	}
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		return newRowsFromSliceOrArray(m, tagName)
+	case reflect.Struct:
+		return newRowsFromStruct(m, tagName)
+	default:
+		return nil, errors.New("the type m must in struct or slice or array")
+	}
+}
+
 // NewRowsFromStructs new Rows from struct slice reflect with tagName
 // NOTE: arr must be of the same type
 // tagName default "json"
-func NewRowsFromStructs(tagName string, arr ...interface{}) (*Rows, error) {
-	if len(arr) == 0 {
-		return nil, errors.New("param arr is nil")
+func newRowsFromSliceOrArray(m interface{}, tagName string) (*Rows, error) {
+	vals := reflect.ValueOf(m)
+	if vals.Len() == 0 {
+		return nil, errors.New("the len of m is zero")
 	}
-	typ := reflect.TypeOf(arr[0]).Elem()
+	typ := reflect.TypeOf(vals.Index(0).Interface()).Elem()
 	if typ.Kind() != reflect.Struct {
 		return nil, errors.New("param type must be struct")
 	}
 	if typ.NumField() == 0 {
 		return nil, errors.New("no properties available")
 	}
-	var columns []string
+
 	var idx []int
 	tag := "json"
 	if len(tagName) > 0 {
 		tag = tagName
 	}
-
+	columns := make([]string, 0, typ.NumField())
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		column := f.Tag.Get(tag)
@@ -205,10 +224,9 @@ func NewRowsFromStructs(tagName string, arr ...interface{}) (*Rows, error) {
 		nextErr:   make(map[int]error),
 		converter: driver.DefaultParameterConverter,
 	}
-
-	for _, m := range arr {
-		val := reflect.ValueOf(m).Elem()
-		var values []driver.Value
+	for i := 0; i < vals.Len(); i++ {
+		val := vals.Index(i).Elem()
+		values := make([]driver.Value, 0, len(idx))
 		for _, i := range idx {
 			// NOTE: field by name ptr nil
 			values = append(values, val.Field(i).Interface())

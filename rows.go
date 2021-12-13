@@ -129,16 +129,9 @@ type Rows struct {
 	closeErr  error
 }
 
-// NewRowsFromStruct new Rows from struct reflect with tagName
-// tagName default "json"
+
 func newRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
-	/*	if m == nil {
-		return nil, errors.New("param m is nil")
-	}*/
 	val := reflect.ValueOf(m).Elem()
-	/*	if val.Kind() != reflect.Struct {
-		return nil, errors.New("param type must be struct")
-	}*/
 	num := val.NumField()
 	if num == 0 {
 		return nil, errors.New("no properties available")
@@ -186,9 +179,6 @@ func NewRowsFromInterface(m interface{}, tagName string) (*Rows, error) {
 	}
 }
 
-// NewRowsFromStructs new Rows from struct slice reflect with tagName
-// NOTE: arr must be of the same type
-// tagName default "json"
 func newRowsFromSliceOrArray(m interface{}, tagName string) (*Rows, error) {
 	vals := reflect.ValueOf(m)
 	if vals.Len() == 0 {
@@ -201,7 +191,6 @@ func newRowsFromSliceOrArray(m interface{}, tagName string) (*Rows, error) {
 	if typ.NumField() == 0 {
 		return nil, errors.New("no properties available")
 	}
-
 	var idx []int
 	tag := "json"
 	if len(tagName) > 0 {

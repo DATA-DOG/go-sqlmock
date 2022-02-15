@@ -768,21 +768,19 @@ func TestNewRowsFromInterface(t *testing.T) {
 		Name:       "sqlMock",
 		CreateTime: time.Now(),
 	}
-	excepted := NewRows([]string{"type", "name", "createTime"}).AddRow(m.Type, m.Name, m.CreateTime)
-
+	want := NewRows([]string{"type", "name", "createTime"}).AddRow(m.Type, m.Name, m.CreateTime)
 	actual, err := NewRowsFromInterface(m, "mock")
 	if err != nil {
 		t.Fatal(err)
 	}
-	same := reflect.DeepEqual(excepted.cols, actual.cols)
+	same := reflect.DeepEqual(want.cols, actual.cols)
 	if !same {
 		t.Fatal("custom tag reflect failed")
 	}
-	same = reflect.DeepEqual(excepted.rows, actual.rows)
+	same = reflect.DeepEqual(want.rows, actual.rows)
 	if !same {
 		t.Fatal("reflect value from tag failed")
 	}
-
 	m1 := &MockStruct{
 		Type:       1,
 		Name:       "sqlMock1",
@@ -794,20 +792,19 @@ func TestNewRowsFromInterface(t *testing.T) {
 		CreateTime: time.Now(),
 	}
 	arr := [3]*MockStruct{m, m1, m2}
-
-	excepted2 := NewRows([]string{"type", "name", "createTime"})
+	want2 := NewRows([]string{"type", "name", "createTime"})
 	for _, v := range arr {
-		excepted2.AddRow(v.Type, v.Name, v.CreateTime)
+		want2.AddRow(v.Type, v.Name, v.CreateTime)
 	}
 	actual2, err := NewRowsFromInterface(arr, "mock")
 	if err != nil {
 		t.Fatal(err)
 	}
-	same = reflect.DeepEqual(excepted2.cols, actual2.cols)
+	same = reflect.DeepEqual(want2.cols, actual2.cols)
 	if !same {
 		t.Fatal("custom tag reflect failed")
 	}
-	same = reflect.DeepEqual(excepted2.rows, actual2.rows)
+	same = reflect.DeepEqual(want2.rows, actual2.rows)
 	if !same {
 		t.Fatal("reflect value from tag failed")
 	}

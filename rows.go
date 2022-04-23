@@ -129,7 +129,7 @@ type Rows struct {
 	closeErr  error
 }
 
-
+// new Rows and add a set of driver.Value by using the struct reflect tag
 func newRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
 	val := reflect.ValueOf(m).Elem()
 	num := val.NumField()
@@ -179,6 +179,7 @@ func NewRowsFromInterface(m interface{}, tagName string) (*Rows, error) {
 	}
 }
 
+// new Rows and add multiple sets of driver.Value by using the tags of the element in reflect type slice/array
 func newRowsFromSliceOrArray(m interface{}, tagName string) (*Rows, error) {
 	vals := reflect.ValueOf(m)
 	if vals.Len() == 0 {

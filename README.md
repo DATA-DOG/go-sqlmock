@@ -193,7 +193,7 @@ func (a AnyTime) Match(v driver.Value) bool {
 
 func TestAnyTimeArgument(t *testing.T) {
 	t.Parallel()
-	db, mock, err := New()
+	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
 	}
@@ -201,7 +201,7 @@ func TestAnyTimeArgument(t *testing.T) {
 
 	mock.ExpectExec("INSERT INTO users").
 		WithArgs("john", AnyTime{}).
-		WillReturnResult(NewResult(1, 1))
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	_, err = db.Exec("INSERT INTO users(name, created_at) VALUES (?, ?)", "john", time.Now())
 	if err != nil {

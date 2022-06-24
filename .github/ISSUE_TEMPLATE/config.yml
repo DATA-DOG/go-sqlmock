@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Curious About Something?
+    url: https://pkg.go.dev/github.com/DATA-DOG/go-sqlmock
+    about: If you have a curious about something that isn't totally clear, please checkout the documentation first before creating an issue.

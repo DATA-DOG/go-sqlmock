@@ -11,8 +11,8 @@ import (
 func TestQueryExpectationArgComparison(t *testing.T) {
 	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
 	against := []namedValue{{Value: int64(5), Ordinal: 1}}
-	if err := e.argsMatches(against); err != nil {
-		t.Errorf("arguments should match, since the no expectation was set, but got err: %s", err)
+	if err := e.argsMatches(against); err == nil {
+		t.Error("arguments should not match, since no expectation was set, but argument was passed")
 	}
 
 	e.args = []driver.Value{5, "str"}

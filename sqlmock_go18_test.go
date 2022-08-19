@@ -435,9 +435,9 @@ func TestContextExecErrorDelay(t *testing.T) {
 	defer db.Close()
 
 	// test that return of error is delayed
-	var delay time.Duration
-	delay = 100 * time.Millisecond
+	var delay time.Duration = 100 * time.Millisecond
 	mock.ExpectExec("^INSERT INTO articles").
+		WithArgs("hello").
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)
 

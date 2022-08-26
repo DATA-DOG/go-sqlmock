@@ -48,6 +48,36 @@ func TestContextExecCancel(t *testing.T) {
 	}
 }
 
+func TestContextExecCompleteOnCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec("DELETE FROM users").
+		WillDelayFor(time.Second).
+		WillCompleteOnCancel().
+		WillReturnResult(NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	_, err = db.ExecContext(ctx, "DELETE FROM users")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestPreparedStatementContextExecCancel(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
@@ -209,6 +239,42 @@ func TestContextQueryCancel(t *testing.T) {
 	}
 }
 
+func TestContextQueryCompleteOnCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	r := NewRows([]string{"col1", "col2"}).AddRow("one", "two").AddRow("one", nil)
+	mock.ExpectQuery("SELECT").
+		WillDelayFor(time.Second).
+		WillCompleteOnCancel().
+		WillReturnRows(r)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	rows, err := db.QueryContext(ctx, "SELECT")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Error("expected one row, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestPreparedStatementContextQueryCancel(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
@@ -328,6 +394,35 @@ func TestContextBeginCancel(t *testing.T) {
 	}
 }
 
+func TestContextBeginCompleteOnCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectBegin().
+		WillDelayFor(time.Second).
+		WillCompleteOnCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	_, err = db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestContextBegin(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
@@ -388,6 +483,35 @@ func TestContextPrepareCancel(t *testing.T) {
 	_, err = db.PrepareContext(ctx, "SELECT")
 	if err != context.Canceled {
 		t.Error("error was expected since context was already done, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestContextPrepareCompleteOnCancel(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectPrepare("SELECT").
+		WillDelayFor(time.Second).
+		WillCompleteOnCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	_, err = db.PrepareContext(ctx, "SELECT")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

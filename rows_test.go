@@ -430,37 +430,6 @@ func TestRowsScanError(t *testing.T) {
 	}
 }
 
-func TestCSVRowParser(t *testing.T) {
-	t.Parallel()
-	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
-	db, mock, err := New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery("SELECT").WillReturnRows(rs)
-
-	rw, err := db.Query("SELECT")
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	defer rw.Close()
-	var col1 string
-	var col2 []byte
-
-	rw.Next()
-	if err = rw.Scan(&col1, &col2); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	if col1 != "a" {
-		t.Fatalf("expected col1 to be 'a', but got [%T]:%+v", col1, col1)
-	}
-	if col2 != nil {
-		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
-	}
-}
-
 func TestWrongNumberOfValues(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()

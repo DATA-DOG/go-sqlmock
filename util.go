@@ -19,3 +19,15 @@ func convNameValue(args []driver.Value) []driver.NamedValue {
 	}
 	return namedArgs
 }
+
+func rawBytes(col driver.Value) (_ []byte, ok bool) {
+	val, ok := col.([]byte)
+	if !ok || len(val) == 0 {
+		return nil, false
+	}
+	// Copy the bytes from the mocked row into a shared raw buffer, which we'll replace the content of later
+	// This allows scanning into sql.RawBytes to correctly become invalid on subsequent calls to Next(), Scan() or Close()
+	b := make([]byte, len(val))
+	copy(b, val)
+	return b, true
+}

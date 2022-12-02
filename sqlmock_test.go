@@ -105,7 +105,7 @@ func TestMockQuery(t *testing.T) {
 	}
 	defer db.Close()
 
-	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
@@ -274,7 +274,7 @@ func TestPrepareExpectations(t *testing.T) {
 	// expect something else, w/o ExpectPrepare()
 	var id int
 	var title string
-	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
@@ -311,12 +311,12 @@ func TestPreparedQueryExecutions(t *testing.T) {
 
 	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?")
 
-	rs1 := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	rs1 := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)
 
-	rs2 := NewRows([]string{"id", "title"}).FromCSVString("2,whoop")
+	rs2 := NewRows([]string{"id", "title"}).AddRow("2", "whoop")
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(2).
 		WillReturnRows(rs2)
@@ -372,11 +372,11 @@ func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").
 		ExpectQuery().
 		WithArgs(5).
-		WillReturnRows(NewRows([]string{"id", "title"}).FromCSVString("5,The quick brown fox"))
+		WillReturnRows(NewRows([]string{"id", "title"}).AddRow("5", "The quick brown fox"))
 	mock.ExpectPrepare("SELECT (.+) FROM authors WHERE id = ?").
 		ExpectQuery().
 		WithArgs(1).
-		WillReturnRows(NewRows([]string{"id", "title"}).FromCSVString("1,Betty B."))
+		WillReturnRows(NewRows([]string{"id", "title"}).AddRow("1", "Betty B."))
 
 	var id int
 	var name string
@@ -435,7 +435,7 @@ func TestWrongExpectations(t *testing.T) {
 
 	mock.ExpectBegin()
 
-	rs1 := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	rs1 := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)
@@ -1182,7 +1182,7 @@ func TestQueryWithTimeout(t *testing.T) {
 	}
 	defer db.Close()
 
-	rs := NewRows([]string{"id", "title"}).FromCSVString("5,hello world")
+	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
 	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
 		WillDelayFor(15 * time.Millisecond). // Query will take longer than timeout

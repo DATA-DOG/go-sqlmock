@@ -3,24 +3,12 @@ package sqlmock
 import (
 	"bytes"
 	"database/sql/driver"
-	"encoding/csv"
 	"fmt"
 	"io"
 	"strings"
 )
 
 const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
-
-// CSVColumnParser is a function which converts trimmed csv
-// column string to a []byte representation. Currently
-// transforms NULL to nil
-var CSVColumnParser = func(s string) []byte {
-	switch {
-	case strings.ToLower(s) == "null":
-		return nil
-	}
-	return []byte(s)
-}
 
 type rowSets struct {
 	sets []*Rows
@@ -39,7 +27,7 @@ func (rs *rowSets) Close() error {
 	return rs.sets[rs.pos].closeErr
 }
 
-// advances to next row
+// Next advances to next row
 func (rs *rowSets) Next(dest []driver.Value) error {
 	r := rs.sets[rs.pos]
 	r.pos++
@@ -89,18 +77,6 @@ func (rs *rowSets) empty() bool {
 		}
 	}
 	return true
-}
-
-func rawBytes(col driver.Value) (_ []byte, ok bool) {
-	val, ok := col.([]byte)
-	if !ok || len(val) == 0 {
-		return nil, false
-	}
-	// Copy the bytes from the mocked row into a shared raw buffer, which we'll replace the content of later
-	// This allows scanning into sql.RawBytes to correctly become invalid on subsequent calls to Next(), Scan() or Close()
-	b := make([]byte, len(val))
-	copy(b, val)
-	return b, true
 }
 
 // Bytes that could have been scanned as sql.RawBytes are only valid until the next call to Next, Scan or Close.
@@ -192,30 +168,6 @@ func (r *Rows) AddRow(values ...driver.Value) *Rows {
 func (r *Rows) AddRows(values ...[]driver.Value) *Rows {
 	for _, value := range values {
 		r.AddRow(value...)
-	}
-
-	return r
-}
-
-// FromCSVString build rows from csv string.
-// return the same instance to perform subsequent actions.
-// Note that the number of values must match the number
-// of columns
-func (r *Rows) FromCSVString(s string) *Rows {
-	res := strings.NewReader(strings.TrimSpace(s))
-	csvReader := csv.NewReader(res)
-
-	for {
-		res, err := csvReader.Read()
-		if err != nil || res == nil {
-			break
-		}
-
-		row := make([]driver.Value, len(r.cols))
-		for i, v := range res {
-			row[i] = CSVColumnParser(strings.TrimSpace(v))
-		}
-		r.rows = append(r.rows, row)
 	}
 	return r
 }

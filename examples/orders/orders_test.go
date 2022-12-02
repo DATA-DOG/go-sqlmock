@@ -23,7 +23,7 @@ func TestShouldNotCancelOrderWithNonPendingStatus(t *testing.T) {
 	// expect query to fetch order and user, match it with regexp
 	mock.ExpectQuery("SELECT (.+) FROM orders AS o INNER JOIN users AS u (.+) FOR UPDATE").
 		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows(columns).FromCSVString("1,1"))
+		WillReturnRows(sqlmock.NewRows(columns).AddRow("1", "1"))
 	// expect transaction rollback, since order status is "cancelled"
 	mock.ExpectRollback()
 

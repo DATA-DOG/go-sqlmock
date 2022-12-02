@@ -7,12 +7,10 @@ on:
     branches: [ master ]
 
 jobs:
-  lint:
+  lint and test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
-
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -23,19 +21,6 @@ jobs:
         with:
           skip-go-installation: true
           args: --timeout 3m --verbose
-
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16
-
       - name: Cache dependencies
         id: cache
         uses: actions/cache@v2
@@ -46,9 +31,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Collect dependencies
-        run: |
-          go mod download
-          go install gotest.tools/gotestsum@latest
+        run: go install gotest.tools/gotestsum@latest
 
       - name: Run unit tests
         run: gotestsum --junitfile unit-tests.xml -- -gcflags=-l ./...

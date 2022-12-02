@@ -1,3 +1,4 @@
+//go:build go1.3
 // +build go1.3
 
 package sqlmock

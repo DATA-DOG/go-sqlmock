@@ -30,7 +30,7 @@ func TestColumn(t *testing.T) {
 	if nullable || !ok {
 		t.Errorf("'number' column should not be nullable")
 	}
-	nullable, ok = column3.IsNullable()
+	_, ok = column3.IsNullable()
 	if ok {
 		t.Errorf("'when' column nullability should be unknown")
 	}
@@ -39,11 +39,11 @@ func TestColumn(t *testing.T) {
 	if length != 100 || !ok {
 		t.Errorf("'test' column wrong length")
 	}
-	length, ok = column2.Length()
+	_, ok = column2.Length()
 	if ok {
 		t.Errorf("'number' column is not of variable length type")
 	}
-	length, ok = column3.Length()
+	_, ok = column3.Length()
 	if ok {
 		t.Errorf("'when' column is not of variable length type")
 	}

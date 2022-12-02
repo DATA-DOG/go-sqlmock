@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pubgo/sqlmock/internal"
 )
 
 func cancelOrder(db *sql.DB, orderID int) error {
@@ -241,7 +243,7 @@ func TestTransactionExpectations(t *testing.T) {
 	// begin with an error
 	mock.ExpectBegin().WillReturnError(fmt.Errorf("some err"))
 
-	tx, err = db.Begin()
+	_, err = db.Begin()
 	if err == nil {
 		t.Error("an error was expected when beginning a transaction, but got none")
 	}
@@ -1149,7 +1151,7 @@ func TestOptionsFail(t *testing.T) {
 		return expected
 	}
 	db, _, err := New(option)
-	defer db.Close()
+	defer internal.HandleClose(db)
 	if err == nil {
 		t.Errorf("missing expecting error '%s' when opening a stub database connection", expected)
 	}

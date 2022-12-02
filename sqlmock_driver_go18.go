@@ -20,13 +20,6 @@ var _ driver.ConnBeginTx = (*sqlmock)(nil)
 type Sqlmock interface {
 	// Common Embed common methods
 	Common
-
-	// NewRowsWithColumnDefinition allows Rows to be created from a
-	// sql driver.Value slice with a definition of sql metadata
-	NewRowsWithColumnDefinition(columns ...*Column) *Rows
-
-	// NewColumn New Column allows to create a Column
-	NewColumn(name string) *Column
 }
 
 // ErrCancelled defines an error value, which can be expected in case of
@@ -312,20 +305,4 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	}
 
 	return expected, nil
-}
-
-// @TODO maybe add ExpectedBegin.WithOptions(driver.TxOptions)
-
-// NewRowsWithColumnDefinition allows Rows to be created from a
-// sql driver.Value slice with a definition of sql metadata
-func (c *sqlmock) NewRowsWithColumnDefinition(columns ...*Column) *Rows {
-	r := NewRowsWithColumnDefinition(columns...)
-	r.converter = c.converter
-	return r
-}
-
-// NewColumn allows to create a Column that can be enhanced with metadata
-// using OfType/Nullable/WithLength/WithPrecisionAndScale methods.
-func (c *sqlmock) NewColumn(name string) *Column {
-	return NewColumn(name)
 }

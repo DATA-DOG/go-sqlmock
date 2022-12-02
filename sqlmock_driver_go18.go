@@ -7,9 +7,13 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 )
+
+var _ driver.QueryerContext = (*sqlmock)(nil)
+var _ driver.ConnPrepareContext = (*sqlmock)(nil)
+var _ driver.ExecerContext = (*sqlmock)(nil)
+var _ driver.ConnBeginTx = (*sqlmock)(nil)
 
 // Sqlmock interface for Go 1.8+
 type Sqlmock interface {
@@ -161,16 +165,6 @@ func (stmt *statement) ExecContext(ctx context.Context, args []driver.NamedValue
 // QueryContext Implement the "StmtQueryContext" interface
 func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	return stmt.conn.QueryContext(ctx, stmt.query, args)
-}
-
-func (c *sqlmock) ExpectPing() *ExpectedPing {
-	if !c.monitorPings {
-		log.Println("ExpectPing will have no effect as monitoring pings is disabled. Use MonitorPingsOption to enable.")
-		return nil
-	}
-	e := &ExpectedPing{}
-	c.expected = append(c.expected, e)
-	return e
 }
 
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer

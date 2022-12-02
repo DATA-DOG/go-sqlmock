@@ -14,7 +14,18 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"log"
 )
+
+func (c *sqlmock) ExpectPing() *ExpectedPing {
+	if !c.monitorPings {
+		log.Println("ExpectPing will have no effect as monitoring pings is disabled. Use MonitorPingsOption to enable.")
+		return nil
+	}
+	e := &ExpectedPing{}
+	c.expected = append(c.expected, e)
+	return e
+}
 
 func (c *sqlmock) ExpectOperation(arg Argument) *ExpectedOperation {
 	var match = AnyArg()

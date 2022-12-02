@@ -167,7 +167,7 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 	}
 	defer expected.Unlock()
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
-		return nil, fmt.Errorf("Prepare: %v", err)
+		return nil, fmt.Errorf("prepare: %v", err)
 	}
 
 	expected.triggered = true

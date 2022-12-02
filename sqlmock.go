@@ -83,6 +83,7 @@ type Common interface {
 	NewRows(columns []string) *Rows
 
 	ExpectOperation(arg Argument) *ExpectedOperation
+	//ExpectSql(sql string) *ExpectedQuery
 }
 
 type sqlmock struct {

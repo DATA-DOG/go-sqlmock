@@ -36,73 +36,73 @@ var ErrCancelled = errors.New("canceling query due to user request")
 // QueryContext Implement the "QueryerContext" interface
 func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	ex, err := c.query(query, args)
-	if ex != nil {
-		select {
-		case <-time.After(ex.delay):
-			if err != nil {
-				return nil, err
-			}
-			return ex.rows, nil
-		case <-ctx.Done():
-			return nil, ErrCancelled
-		}
+	if ex == nil {
+		return nil, err
 	}
 
-	return nil, err
+	select {
+	case <-time.After(ex.delay):
+		if err != nil {
+			return nil, err
+		}
+		return ex.rows, nil
+	case <-ctx.Done():
+		return nil, ErrCancelled
+	}
 }
 
 // ExecContext Implement the "ExecerContext" interface
 func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	ex, err := c.exec(query, args)
-	if ex != nil {
-		select {
-		case <-time.After(ex.delay):
-			if err != nil {
-				return nil, err
-			}
-			return ex.result, nil
-		case <-ctx.Done():
-			return nil, ErrCancelled
-		}
+	if ex == nil {
+		return nil, err
 	}
 
-	return nil, err
+	select {
+	case <-time.After(ex.delay):
+		if err != nil {
+			return nil, err
+		}
+		return ex.result, nil
+	case <-ctx.Done():
+		return nil, ErrCancelled
+	}
 }
 
 // BeginTx Implement the "ConnBeginTx" interface
 func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	ex, err := c.begin()
-	if ex != nil {
-		select {
-		case <-time.After(ex.delay):
-			if err != nil {
-				return nil, err
-			}
-			return c, nil
-		case <-ctx.Done():
-			return nil, ErrCancelled
-		}
+	if ex == nil {
+		return nil, err
 	}
 
-	return nil, err
+	select {
+	case <-time.After(ex.delay):
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	case <-ctx.Done():
+		return nil, ErrCancelled
+	}
 }
 
 // PrepareContext Implement the "ConnPrepareContext" interface
 func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	ex, err := c.prepare(query)
-	if ex != nil {
-		select {
-		case <-time.After(ex.delay):
-			if err != nil {
-				return nil, err
-			}
-			return &statement{c, ex, query}, nil
-		case <-ctx.Done():
-			return nil, ErrCancelled
-		}
+	if ex == nil {
+		return nil, err
 	}
 
-	return nil, err
+	select {
+	case <-time.After(ex.delay):
+		if err != nil {
+			return nil, err
+		}
+		return &statement{c, ex, query}, nil
+	case <-ctx.Done():
+		return nil, ErrCancelled
+	}
 }
 
 // Ping Implement the "Pinger" interface - the explicit DB driver ping was only added to database/sql in Go 1.8
@@ -112,15 +112,16 @@ func (c *sqlmock) Ping(ctx context.Context) error {
 	}
 
 	ex, err := c.ping()
-	if ex != nil {
-		select {
-		case <-ctx.Done():
-			return ErrCancelled
-		case <-time.After(ex.delay):
-		}
+	if ex == nil {
+		return err
 	}
 
-	return err
+	select {
+	case <-ctx.Done():
+		return ErrCancelled
+	case <-time.After(ex.delay):
+		return err
+	}
 }
 
 func (c *sqlmock) ping() (*ExpectedPing, error) {
@@ -158,28 +159,10 @@ func (c *sqlmock) ping() (*ExpectedPing, error) {
 	return expected, expected.err
 }
 
-// ExecContext Implement the "StmtExecContext" interface
-func (stmt *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	return stmt.conn.ExecContext(ctx, stmt.query, args)
-}
-
-// QueryContext Implement the "StmtQueryContext" interface
-func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	return stmt.conn.QueryContext(ctx, stmt.query, args)
-}
-
 // Query meets http://golang.org/pkg/database/sql/driver/#Queryer
 // Deprecated: Drivers should implement QueryerContext instead.
 func (c *sqlmock) Query(query string, args []driver.Value) (driver.Rows, error) {
-	namedArgs := make([]driver.NamedValue, len(args))
-	for i, v := range args {
-		namedArgs[i] = driver.NamedValue{
-			Ordinal: i + 1,
-			Value:   v,
-		}
-	}
-
-	ex, err := c.query(query, namedArgs)
+	ex, err := c.query(query, convNameValue(args))
 	if ex != nil {
 		time.Sleep(ex.delay)
 	}
@@ -209,11 +192,13 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 			next.Unlock()
 			return nil, fmt.Errorf("call to Query '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
+
 		if qr, ok := next.(*ExpectedQuery); ok {
 			if err := c.queryMatcher.Match(qr.expectSQL, query); err != nil {
 				next.Unlock()
 				continue
 			}
+
 			if err := qr.attemptArgMatch(args); err == nil {
 				expected = qr
 				break
@@ -233,11 +218,11 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	defer expected.Unlock()
 
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
-		return nil, fmt.Errorf("Query: %v", err)
+		return nil, fmt.Errorf("query: %v", err)
 	}
 
 	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("Query '%s', arguments do not match: %s", query, err)
+		return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
 	}
 
 	expected.triggered = true
@@ -246,7 +231,7 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	}
 
 	if expected.rows == nil {
-		return nil, fmt.Errorf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
+		return nil, fmt.Errorf("query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
 	return expected, nil
 }
@@ -254,15 +239,7 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 // Exec meets http://golang.org/pkg/database/sql/driver/#Execer
 // Deprecated: Drivers should implement ExecerContext instead.
 func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error) {
-	namedArgs := make([]driver.NamedValue, len(args))
-	for i, v := range args {
-		namedArgs[i] = driver.NamedValue{
-			Ordinal: i + 1,
-			Value:   v,
-		}
-	}
-
-	ex, err := c.exec(query, namedArgs)
+	ex, err := c.exec(query, convNameValue(args))
 	if ex != nil {
 		time.Sleep(ex.delay)
 	}
@@ -292,6 +269,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 			next.Unlock()
 			return nil, fmt.Errorf("call to ExecQuery '%s' with args %+v, was not expected, next expectation is: %s", query, args, next)
 		}
+
 		if exec, ok := next.(*ExpectedExec); ok {
 			if err := c.queryMatcher.Match(exec.expectSQL, query); err != nil {
 				next.Unlock()
@@ -305,6 +283,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		}
 		next.Unlock()
 	}
+
 	if expected == nil {
 		msg := "call to ExecQuery '%s' with args %+v was not expected"
 		if fulfilled == len(c.expected) {
@@ -312,6 +291,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		}
 		return nil, fmt.Errorf(msg, query, args)
 	}
+
 	defer expected.Unlock()
 
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {

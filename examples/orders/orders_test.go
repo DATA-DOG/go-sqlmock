@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/pubgo/sqlmock"
 )
 
 // will test that order with a different status, cannot be cancelled

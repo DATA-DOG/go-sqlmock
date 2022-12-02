@@ -1,0 +1,63 @@
+name: Lint & Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          skip-go-installation: true
+          args: --timeout 3m --verbose
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Collect dependencies
+        run: |
+          go mod download
+          go install gotest.tools/gotestsum@latest
+
+      - name: Run unit tests
+        run: gotestsum --junitfile unit-tests.xml -- -gcflags=-l ./...
+
+      - name: Test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Test report
+          path: unit-tests.xml
+          reporter: java-junit
+          fail-on-error: false

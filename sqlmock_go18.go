@@ -13,14 +13,14 @@ import (
 
 // Sqlmock interface for Go 1.8+
 type Sqlmock interface {
-	// Embed common methods
-	SqlmockCommon
+	// Common Embed common methods
+	Common
 
 	// NewRowsWithColumnDefinition allows Rows to be created from a
 	// sql driver.Value slice with a definition of sql metadata
 	NewRowsWithColumnDefinition(columns ...*Column) *Rows
 
-	// New Column allows to create a Column
+	// NewColumn New Column allows to create a Column
 	NewColumn(name string) *Column
 }
 
@@ -28,7 +28,7 @@ type Sqlmock interface {
 // such cancellation error.
 var ErrCancelled = errors.New("canceling query due to user request")
 
-// Implement the "QueryerContext" interface
+// QueryContext Implement the "QueryerContext" interface
 func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	ex, err := c.query(query, args)
 	if ex != nil {
@@ -46,7 +46,7 @@ func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.
 	return nil, err
 }
 
-// Implement the "ExecerContext" interface
+// ExecContext Implement the "ExecerContext" interface
 func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	ex, err := c.exec(query, args)
 	if ex != nil {
@@ -64,7 +64,7 @@ func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.N
 	return nil, err
 }
 
-// Implement the "ConnBeginTx" interface
+// BeginTx Implement the "ConnBeginTx" interface
 func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	ex, err := c.begin()
 	if ex != nil {
@@ -82,7 +82,7 @@ func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx
 	return nil, err
 }
 
-// Implement the "ConnPrepareContext" interface
+// PrepareContext Implement the "ConnPrepareContext" interface
 func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	ex, err := c.prepare(query)
 	if ex != nil {
@@ -100,7 +100,7 @@ func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt
 	return nil, err
 }
 
-// Implement the "Pinger" interface - the explicit DB driver ping was only added to database/sql in Go 1.8
+// Ping Implement the "Pinger" interface - the explicit DB driver ping was only added to database/sql in Go 1.8
 func (c *sqlmock) Ping(ctx context.Context) error {
 	if !c.monitorPings {
 		return nil
@@ -153,12 +153,12 @@ func (c *sqlmock) ping() (*ExpectedPing, error) {
 	return expected, expected.err
 }
 
-// Implement the "StmtExecContext" interface
+// ExecContext Implement the "StmtExecContext" interface
 func (stmt *statement) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
 	return stmt.conn.ExecContext(ctx, stmt.query, args)
 }
 
-// Implement the "StmtQueryContext" interface
+// QueryContext Implement the "StmtQueryContext" interface
 func (stmt *statement) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	return stmt.conn.QueryContext(ctx, stmt.query, args)
 }

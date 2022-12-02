@@ -368,3 +368,23 @@ func (e *ExpectedPing) String() string {
 	}
 	return msg
 }
+
+type ExpectedOperation struct {
+	commonExpectation
+	arg Argument
+}
+
+// WillReturnError allows to set an error for *sql.DB.Begin action
+func (e *ExpectedOperation) WillReturnError(err error) *ExpectedOperation {
+	e.err = err
+	return e
+}
+
+// String returns string representation
+func (e *ExpectedOperation) String() string {
+	msg := "ExpectedOperation => expecting database transaction Begin"
+	if e.err != nil {
+		msg += fmt.Sprintf(", which should return error: %s", e.err)
+	}
+	return msg
+}

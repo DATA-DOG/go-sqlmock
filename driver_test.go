@@ -33,8 +33,8 @@ func TestShouldOpenConnectionIssue15(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, but got: %s", err)
 	}
-	if len(pool.conns) != 1 {
-		t.Errorf("expected 1 connection in pool, but there is: %d", len(pool.conns))
+	if len(pool.connMap) != 1 {
+		t.Errorf("expected 1 connection in pool, but there is: %d", len(pool.connMap))
 	}
 
 	smock, _ := mock.(*sqlmock)
@@ -86,8 +86,8 @@ func TestTwoOpenConnectionsOnTheSameDSN(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, but got: %s", err)
 	}
-	if len(pool.conns) != 2 {
-		t.Errorf("expected 2 connection in pool, but there is: %d", len(pool.conns))
+	if len(pool.connMap) != 2 {
+		t.Errorf("expected 2 connection in pool, but there is: %d", len(pool.connMap))
 	}
 
 	if db == db2 {

@@ -11,22 +11,29 @@ var pool *mockDriver
 
 func init() {
 	pool = &mockDriver{
-		conns: make(map[string]*sqlmock),
+		connMap: make(map[string]*sqlmock),
 	}
 	sql.Register("sqlmock", pool)
+}
+
+func DefaultDsn() string {
+	pool.Lock()
+	dsn := fmt.Sprintf("sqlmock_db_%d", pool.counter)
+	pool.Unlock()
+	return dsn
 }
 
 type mockDriver struct {
 	sync.Mutex
 	counter int
-	conns   map[string]*sqlmock
+	connMap map[string]*sqlmock
 }
 
 func (d *mockDriver) Open(dsn string) (driver.Conn, error) {
 	d.Lock()
 	defer d.Unlock()
 
-	c, ok := d.conns[dsn]
+	c, ok := d.connMap[dsn]
 	if !ok {
 		return c, fmt.Errorf("expected a connection to be available, but it is not")
 	}
@@ -46,7 +53,7 @@ func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	pool.counter++
 
 	smock := &sqlmock{dsn: dsn, drv: pool, ordered: true}
-	pool.conns[dsn] = smock
+	pool.connMap[dsn] = smock
 	pool.Unlock()
 
 	return smock.open(options)
@@ -69,12 +76,12 @@ func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 // really need it and there is no other way around.
 func NewWithDSN(dsn string, options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	pool.Lock()
-	if _, ok := pool.conns[dsn]; ok {
+	if _, ok := pool.connMap[dsn]; ok {
 		pool.Unlock()
 		return nil, nil, fmt.Errorf("cannot create a new mock database with the same dsn: %s", dsn)
 	}
 	smock := &sqlmock{dsn: dsn, drv: pool, ordered: true}
-	pool.conns[dsn] = smock
+	pool.connMap[dsn] = smock
 	pool.Unlock()
 
 	return smock.open(options)

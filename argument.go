@@ -22,3 +22,7 @@ type anyArgument struct{}
 func (a anyArgument) Match(_ driver.Value) bool {
 	return true
 }
+
+type ArgFunc func(driver.Value) bool
+
+func (a ArgFunc) Match(v driver.Value) bool { return a(v) }

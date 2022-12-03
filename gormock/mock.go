@@ -23,6 +23,7 @@ type dbMock struct {
 	update    bool
 	create    bool
 	tx        bool
+	prepare   bool
 	fields    map[string]driver.Value
 	column    []string
 	tableName string
@@ -60,6 +61,10 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 			sql += fmt.Sprintf("%s *", name)
 			args = append(args, parseVal(val)...)
 		}
+	}
+
+	if m.prepare {
+		// TODO prepare
 	}
 
 	var e interface{}
@@ -111,6 +116,11 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 
 func (m *dbMock) ExpectTx() *dbMock {
 	m.tx = true
+	return m
+}
+
+func (m *dbMock) ExpectPrepare() *dbMock {
+	m.prepare = true
 	return m
 }
 

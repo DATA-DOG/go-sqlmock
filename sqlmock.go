@@ -81,9 +81,6 @@ type Common interface {
 	// sql driver.Value slice or from the CSV string and
 	// to be used as sql driver.Rows.
 	NewRows(columns []string) *Rows
-
-	ExpectOperation(arg Argument) *ExpectedOperation
-	//ExpectSql(sql string) *ExpectedQuery
 }
 
 type sqlmock struct {

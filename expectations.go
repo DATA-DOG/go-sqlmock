@@ -131,6 +131,12 @@ type ExpectedQuery struct {
 	rowsWereClosed   bool
 }
 
+// WithArgsCheck match sql args
+func (e *ExpectedQuery) WithArgsCheck(checkArgs func([]driver.NamedValue) error) *ExpectedQuery {
+	e.checkArgs = checkArgs
+	return e
+}
+
 // WithArgs will match given expected args to actual database query arguments.
 // if at least one argument does not match, it will return an error. For specific
 // arguments an sqlmock.Argument interface can be used to match an argument.
@@ -210,6 +216,12 @@ func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
 // result. May be used together with Context
 func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 	e.delay = duration
+	return e
+}
+
+// WithArgsCheck match sql args
+func (e *ExpectedExec) WithArgsCheck(checkArgs func([]driver.NamedValue) error) *ExpectedExec {
+	e.checkArgs = checkArgs
 	return e
 }
 
@@ -338,6 +350,7 @@ type queryBasedExpectation struct {
 	expectSQL string
 	converter driver.ValueConverter
 	args      []driver.Value
+	checkArgs func([]driver.NamedValue) error
 }
 
 // ExpectedPing is used to manage *sql.DB.Ping expectations.

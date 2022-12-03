@@ -192,9 +192,16 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 				continue
 			}
 
-			if err := qr.attemptArgMatch(args); err == nil {
-				expected = qr
-				break
+			if qr.checkArgs != nil {
+				if err := qr.checkArgs(args); err == nil {
+					expected = qr
+					break
+				}
+			} else {
+				if err := qr.attemptArgMatch(args); err == nil {
+					expected = qr
+					break
+				}
 			}
 		}
 		next.Unlock()
@@ -214,8 +221,14 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 		return nil, fmt.Errorf("query: %v", err)
 	}
 
-	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
+	if expected.checkArgs != nil {
+		if err := expected.checkArgs(args); err != nil {
+			return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
+		}
+	} else {
+		if err := expected.argsMatches(args); err != nil {
+			return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
+		}
 	}
 
 	expected.triggered = true
@@ -269,9 +282,16 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 				continue
 			}
 
-			if err := exec.attemptArgMatch(args); err == nil {
-				expected = exec
-				break
+			if exec.checkArgs != nil {
+				if err := exec.checkArgs(args); err == nil {
+					expected = exec
+					break
+				}
+			} else {
+				if err := exec.attemptArgMatch(args); err == nil {
+					expected = exec
+					break
+				}
 			}
 		}
 		next.Unlock()
@@ -291,8 +311,14 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		return nil, fmt.Errorf("ExecQuery: %v", err)
 	}
 
-	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
+	if expected.checkArgs != nil {
+		if err := expected.checkArgs(args); err != nil {
+			return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
+		}
+	} else {
+		if err := expected.argsMatches(args); err != nil {
+			return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
+		}
 	}
 
 	expected.triggered = true

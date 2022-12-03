@@ -27,13 +27,15 @@ func (c *sqlmock) ExpectPing() *ExpectedPing {
 	return e
 }
 
-func (c *sqlmock) ExpectOperation(arg Argument) *ExpectedOperation {
+func (c *sqlmock) ExpectSql(expectedOpt Argument, expectedSQL string) *ExpectedSql {
 	var match = AnyArg()
-	if arg != nil {
-		match = arg
+	if expectedOpt != nil {
+		match = expectedOpt
 	}
 
-	e := &ExpectedOperation{arg: match}
+	e := &ExpectedSql{expectedOpt: match}
+	e.expectSQL = expectedSQL
+	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
 }

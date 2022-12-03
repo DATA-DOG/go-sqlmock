@@ -120,6 +120,83 @@ func (e *ExpectedRollback) String() string {
 	return msg
 }
 
+// ExpectedSql is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
+// *sql.Tx.QueryRow, *sql.Stmt.Query or *sql.Stmt.QueryRow expectations.
+// Returned by *Sqlmock.ExpectQuery.
+type ExpectedSql struct {
+	queryBasedExpectation
+	rows             driver.Rows
+	delay            time.Duration
+	rowsMustBeClosed bool
+	rowsWereClosed   bool
+	result           driver.Result
+	expectedOpt      Argument
+}
+
+// WithArgsCheck match sql args
+func (e *ExpectedSql) WithArgsCheck(checkArgs func(sql string, args []driver.NamedValue) error) *ExpectedSql {
+	e.checkArgs = checkArgs
+	return e
+}
+
+// WithArgs will match given expected args to actual database query arguments.
+// if at least one argument does not match, it will return an error. For specific
+// arguments an sqlmock.Argument interface can be used to match an argument.
+func (e *ExpectedSql) WithArgs(args ...driver.Value) *ExpectedSql {
+	e.args = args
+	return e
+}
+
+// RowsWillBeClosed expects this query rows to be closed.
+func (e *ExpectedSql) RowsWillBeClosed() *ExpectedSql {
+	e.rowsMustBeClosed = true
+	return e
+}
+
+// WillReturnError allows to set an error for expected database query
+func (e *ExpectedSql) WillReturnError(err error) *ExpectedSql {
+	e.err = err
+	return e
+}
+
+// WillDelayFor allows to specify duration for which it will delay
+// result. May be used together with Context
+func (e *ExpectedSql) WillDelayFor(duration time.Duration) *ExpectedSql {
+	e.delay = duration
+	return e
+}
+
+func (e *ExpectedSql) WillReturnResult(result driver.Result) *ExpectedSql {
+	e.result = result
+	return e
+}
+
+// String returns string representation
+func (e *ExpectedSql) String() string {
+	msg := "ExpectedSql => expecting Query, QueryContext or QueryRow which:"
+	msg += "\n  - matches sql: '" + e.expectSQL + "'"
+
+	if len(e.args) == 0 {
+		msg += "\n  - is without arguments"
+	} else {
+		msg += "\n  - is with arguments:\n"
+		for i, arg := range e.args {
+			msg += fmt.Sprintf("    %d - %+v\n", i, arg)
+		}
+		msg = strings.TrimSpace(msg)
+	}
+
+	if e.rows != nil {
+		msg += fmt.Sprintf("\n  - %s", e.rows)
+	}
+
+	if e.err != nil {
+		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
+	}
+
+	return msg
+}
+
 // ExpectedQuery is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
 // *sql.Tx.QueryRow, *sql.Stmt.Query or *sql.Stmt.QueryRow expectations.
 // Returned by *Sqlmock.ExpectQuery.
@@ -132,7 +209,7 @@ type ExpectedQuery struct {
 }
 
 // WithArgsCheck match sql args
-func (e *ExpectedQuery) WithArgsCheck(checkArgs func([]driver.NamedValue) error) *ExpectedQuery {
+func (e *ExpectedQuery) WithArgsCheck(checkArgs func(sql string, args []driver.NamedValue) error) *ExpectedQuery {
 	e.checkArgs = checkArgs
 	return e
 }
@@ -220,7 +297,7 @@ func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 }
 
 // WithArgsCheck match sql args
-func (e *ExpectedExec) WithArgsCheck(checkArgs func([]driver.NamedValue) error) *ExpectedExec {
+func (e *ExpectedExec) WithArgsCheck(checkArgs func(sql string, args []driver.NamedValue) error) *ExpectedExec {
 	e.checkArgs = checkArgs
 	return e
 }
@@ -350,7 +427,7 @@ type queryBasedExpectation struct {
 	expectSQL string
 	converter driver.ValueConverter
 	args      []driver.Value
-	checkArgs func([]driver.NamedValue) error
+	checkArgs func(sql string, args []driver.NamedValue) error
 }
 
 // ExpectedPing is used to manage *sql.DB.Ping expectations.

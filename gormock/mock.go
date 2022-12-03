@@ -27,6 +27,7 @@ type dbMock struct {
 	fields    map[string]driver.Value
 	column    []string
 	tableName string
+	checker   func(sql string, args []driver.NamedValue) error
 }
 
 func (m *dbMock) Mock() sqlmock.Sqlmock { return m.mock }
@@ -64,24 +65,25 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 	}
 
 	if m.prepare {
+		m.mock.ExpectPrepare()
 		// TODO prepare
 	}
 
 	var e interface{}
 	if m.query {
-		e = m.mock.ExpectQuery(selectSql(m.tableName, sql))
+		e = m.mock.ExpectQuery(selectSql(m.tableName, sql)).WithArgsCheck(m.checker)
 	}
 
 	if m.create {
-		e = m.mock.ExpectQuery(insertSql(m.tableName, sql))
+		e = m.mock.ExpectQuery(insertSql(m.tableName, sql)).WithArgsCheck(m.checker)
 	}
 
 	if m.update {
-		e = m.mock.ExpectExec(updateSql(m.tableName, sql))
+		e = m.mock.ExpectExec(updateSql(m.tableName, sql)).WithArgsCheck(m.checker)
 	}
 
 	if m.delete {
-		e = m.mock.ExpectExec(deleteSql(m.tableName, sql))
+		e = m.mock.ExpectExec(deleteSql(m.tableName, sql)).WithArgsCheck(m.checker)
 	}
 
 	switch e := e.(type) {
@@ -129,15 +131,20 @@ func (m *dbMock) ExpectField(name string, value interface{}) *dbMock {
 	return m
 }
 
-func (m *dbMock) ExpectErr(err error) {
+func (m *dbMock) ExpectChecker(checker func(sql string, args []driver.NamedValue) error) *dbMock {
+	m.checker = checker
+	return m
+}
+
+func (m *dbMock) ReturnErr(err error) {
 	m.do(err, nil, nil)
 }
 
-func (m *dbMock) ExpectResult(lastInsertID int64, rowsAffected int64) {
+func (m *dbMock) ReturnResult(lastInsertID int64, rowsAffected int64) {
 	m.do(nil, sqlmock.NewResult(lastInsertID, rowsAffected), nil)
 }
 
-func (m *dbMock) ExpectReturn(returns interface{}) {
+func (m *dbMock) Return(returns interface{}) {
 	m.do(nil, nil, ModelToRows(returns))
 }
 

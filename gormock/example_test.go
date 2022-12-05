@@ -112,13 +112,14 @@ func TestFindById(t *testing.T) {
 	mock := NewMockDB(t)
 
 	var n = time.Now()
-	mock.Find(&User{ID: 1}).Return(&User{
-		ID:        1,
-		Name:      "hello",
-		Email:     "example@gmail.com",
-		CreatedAt: &n,
-		UpdatedAt: &n,
-	})
+	mock.Find(&User{ID: 1}).
+		Return(&User{
+			ID:        1,
+			Name:      "hello",
+			Email:     "example@gmail.com",
+			CreatedAt: &n,
+			UpdatedAt: &n,
+		})
 
 	var user *User
 	var err = mock.DB().Where("id = ?", 1).First(&user).Error
@@ -126,10 +127,12 @@ func TestFindById(t *testing.T) {
 	assert.NotNil(t, user)
 	assert.Equal(t, user.Name, "hello")
 
-	mock.Find(&User{}).ExpectField("id", []int{1, 2}).Return(&User{
-		ID:   2,
-		Name: "hello1",
-	})
+	mock.Find(&User{}).
+		ExpectField("id", []int{1, 2}).
+		Return(&User{
+			ID:   2,
+			Name: "hello1",
+		})
 
 	var user1 *User
 	err = mock.DB().Select("id").Where("id in ?", []int{1, 2}).First(&user1).Error

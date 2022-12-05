@@ -18,7 +18,7 @@ func TestCustomValueConverterExec(t *testing.T) {
 	hobbies := []string{"soccer", "netflix"}
 	mock.ExpectBegin()
 	mock.ExpectPrepare(expectedQuery)
-	mock.ExpectExec(expectedQuery).WithArgs(name, email, age, hobbies).WillReturnResult(NewResult(1, 1))
+	mock.ExpectSql(nil, expectedQuery).WithArgs(name, email, age, hobbies).WillReturnResult(NewResult(1, 1))
 	mock.ExpectCommit()
 
 	ctx := context.Background()

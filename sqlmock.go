@@ -33,14 +33,6 @@ type Common interface {
 	// statement to prevent repeating expectedSQL
 	ExpectPrepare(expectedSQL string) *ExpectedPrepare
 
-	// ExpectQuery expects Query() or QueryRow() to be called with expectedSQL query.
-	// the *ExpectedQuery allows to mock database response.
-	ExpectQuery(expectedSQL string) *ExpectedQuery
-
-	// ExpectExec expects Exec() to be called with expectedSQL query.
-	// the *ExpectedExec allows to mock database response
-	ExpectExec(expectedSQL string) *ExpectedExec
-
 	// ExpectBegin expects *sql.DB.Begin to be called.
 	// the *ExpectedBegin allows to mock database response
 	ExpectBegin() *ExpectedBegin

@@ -26,7 +26,7 @@ func (s CustomConverter) ConvertValue(v interface{}) (driver.Value, error) {
 func ExampleExpectedExec() {
 	db, mock, _ := New()
 	result := NewErrorResult(fmt.Errorf("some error"))
-	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+	mock.ExpectSql(nil, "^INSERT (.+)").WillReturnResult(result)
 	res, _ := db.Exec("INSERT something")
 	_, err := res.LastInsertId()
 	fmt.Println(err)
@@ -49,8 +49,7 @@ func TestBuildQuery(t *testing.T) {
 
 	`
 
-	mock.ExpectQuery(query)
-	mock.ExpectExec(query)
+	mock.ExpectSql(nil, query)
 	mock.ExpectPrepare(query)
 
 	db.QueryRow(query)
@@ -80,7 +79,7 @@ func TestCustomValueConverterQueryScan(t *testing.T) {
 	expectedStringValue := "ValueOne"
 	expectedIntValue := 2
 	expectedArrayValue := []string{"Three", "Four"}
-	mock.ExpectQuery(query).WillReturnRows(mock.NewRows([]string{"One", "Two", "Three"}).AddRow(expectedStringValue, expectedIntValue, []string{"Three", "Four"}))
+	mock.ExpectSql(nil, query).WillReturnRows(mock.NewRows([]string{"One", "Two", "Three"}).AddRow(expectedStringValue, expectedIntValue, []string{"Three", "Four"}))
 	row := db.QueryRow(query)
 	var stringValue string
 	var intValue int

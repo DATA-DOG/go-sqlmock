@@ -38,12 +38,10 @@ func (u TestTab) TableName() string {
 func Test_Select(t *testing.T) {
 	mock := NewMockDB(t)
 
-	mock.Find(&TestTab{ID: 1}).
-		ExpectChecker(func(sql string, args []driver.NamedValue) error {
-			fmt.Println(sql)
-			fmt.Printf("%#v\n", args)
-			return nil
-		}).Return(&TestTab{
+	mock.Find(&TestTab{ID: 1}).ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
+		fmt.Println(opt, sql, args)
+		return nil
+	}).Return(&TestTab{
 		ID:    1,
 		Name:  "test",
 		CTime: 1630250445,
@@ -70,10 +68,16 @@ func TestCreate(t *testing.T) {
 		Email:     "example@gmail.com",
 	}
 
-	mock.Insert(u).ExpectField("deleted_at", sqlmock.AnyArg()).Return(&User{
-		ID:   2,
-		Name: "sheep",
-	})
+	mock.Create(u).
+		ExpectField("deleted_at", sqlmock.AnyArg()).
+		ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
+			fmt.Println(opt, sql, args)
+			return nil
+		}).
+		Return(&User{
+			ID:   2,
+			Name: "sheep",
+		})
 
 	err := mock.DB().Create(u).Error
 	assert.NoError(t, err)
@@ -85,7 +89,12 @@ func TestCreate(t *testing.T) {
 func TestDelete(t *testing.T) {
 	mock := NewMockDB(t)
 
-	mock.Delete(&User{Name: "sheep"}).ExpectTx().ReturnResult(1, 1)
+	mock.Delete(&User{Name: "sheep"}).
+		ExpectTx().
+		ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
+			fmt.Println(opt, sql, args)
+			return nil
+		}).ReturnResult(1, 1)
 	ret := mock.DB().Where("name = ?", "sheep").Delete(&User{})
 	assert.NoError(t, ret.Error)
 	assert.Equal(t, ret.RowsAffected, int64(1))

@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/pubgo/sqlmock"
@@ -115,7 +116,7 @@ func ModelToRows(dst interface{}) *sqlmock.Rows {
 }
 
 func insertSql(tableName string, sql string) string {
-	return "INSERT INTO" + fmt.Sprintf(` "%s" * VALUES *`, tableName)
+	return "INSERT INTO" + fmt.Sprintf(` "%s" *%s VALUES *`, tableName, strings.ReplaceAll(sql, " ", ""))
 }
 
 func deleteSql(tableName string, where string) string {

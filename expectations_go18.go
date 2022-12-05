@@ -10,17 +10,6 @@ import (
 	"reflect"
 )
 
-// WillReturnRows specifies the set of resulting rows that will be returned
-// by the triggered query
-func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
-	sets := make([]*Rows, len(rows))
-	for i, r := range rows {
-		sets[i] = r
-	}
-	e.rows = &rowSets{sets: sets, ex: e}
-	return e
-}
-
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 	if nil == e.args {
 		if len(args) > 0 {

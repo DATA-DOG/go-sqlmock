@@ -21,7 +21,7 @@ func TestQueryMultiRows(t *testing.T) {
 	rs1 := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
 	rs2 := NewRows([]string{"name"}).AddRow("gopher").AddRow("john").AddRow("jane").RowError(2, fmt.Errorf("error"))
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = \\?;SELECT name FROM users").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = \\?;SELECT name FROM users").
 		WithArgs(5).
 		WillReturnRows(rs1, rs2)
 

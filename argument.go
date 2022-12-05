@@ -26,3 +26,15 @@ func (a anyArgument) Match(_ driver.Value) bool {
 type ArgFunc func(driver.Value) bool
 
 func (a ArgFunc) Match(v driver.Value) bool { return a(v) }
+
+func ExecArg() Argument {
+	return ArgFunc(func(value driver.Value) bool {
+		return value == "exec"
+	})
+}
+
+func QueryArg() Argument {
+	return ArgFunc(func(value driver.Value) bool {
+		return value == "query"
+	})
+}

@@ -49,14 +49,14 @@ func TestShouldOpenConnectionIssue15(t *testing.T) {
 		}
 	}()
 
-	mock.ExpectQuery("SELECT").WillReturnRows(NewRows([]string{"one", "two"}).AddRow("val1", "val2"))
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(NewRows([]string{"one", "two"}).AddRow("val1", "val2"))
 	rows, err := db.Query("SELECT")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 	defer rows.Close()
 
-	mock.ExpectExec("UPDATE").WillReturnResult(NewResult(1, 1))
+	mock.ExpectSql(nil, "UPDATE").WillReturnResult(NewResult(1, 1))
 	if _, err = db.Exec("UPDATE"); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}

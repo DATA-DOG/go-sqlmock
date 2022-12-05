@@ -18,16 +18,17 @@ type dbMock struct {
 	mock sqlmock.Sqlmock
 	db   *gorm.DB
 
-	query     bool
-	delete    bool
-	update    bool
-	create    bool
-	tx        bool
-	prepare   bool
-	fields    map[string]driver.Value
-	column    []string
-	tableName string
-	checker   func(sql string, args []driver.NamedValue) error
+	query      bool
+	delete     bool
+	update     bool
+	create     bool
+	tx         bool
+	prepare    bool
+	fields     map[string]driver.Value
+	column     []string
+	tableName  string
+	checker    func(opt string, sql string, args []driver.NamedValue) error
+	optChecker sqlmock.Argument
 }
 
 func (m *dbMock) Mock() sqlmock.Sqlmock { return m.mock }
@@ -64,47 +65,39 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 		}
 	}
 
-	if m.prepare {
-		m.mock.ExpectPrepare()
-		// TODO prepare
-	}
-
-	var e interface{}
 	if m.query {
-		e = m.mock.ExpectQuery(selectSql(m.tableName, sql)).WithArgsCheck(m.checker)
+		sql = selectSql(m.tableName, sql)
 	}
 
 	if m.create {
-		e = m.mock.ExpectQuery(insertSql(m.tableName, sql)).WithArgsCheck(m.checker)
+		sql = insertSql(m.tableName, sql)
 	}
 
 	if m.update {
-		e = m.mock.ExpectExec(updateSql(m.tableName, sql)).WithArgsCheck(m.checker)
+		sql = updateSql(m.tableName, sql)
 	}
 
 	if m.delete {
-		e = m.mock.ExpectExec(deleteSql(m.tableName, sql)).WithArgsCheck(m.checker)
+		sql = deleteSql(m.tableName, sql)
 	}
 
-	switch e := e.(type) {
-	case *sqlmock.ExpectedQuery:
-		e.WithArgs(args...)
-		if err != nil {
-			e.WillReturnError(err)
-		}
+	if m.prepare {
+		m.mock.ExpectPrepare(sql)
+	}
 
-		if rows != nil {
-			e.WillReturnRows(rows)
-		}
-	case *sqlmock.ExpectedExec:
-		e.WithArgs(args...)
-		if err != nil {
-			e.WillReturnError(err)
-		}
+	e := m.mock.ExpectSql(m.optChecker, sql)
+	e = e.WithArgsCheck(m.checker)
+	e = e.WithArgs(args...)
+	if err != nil {
+		e = e.WillReturnError(err)
+	}
 
-		if ret != nil {
-			e.WillReturnResult(ret)
-		}
+	if rows != nil {
+		e = e.WillReturnRows(rows)
+	}
+
+	if ret != nil {
+		e.WillReturnResult(ret)
 	}
 
 	if m.tx {
@@ -131,8 +124,20 @@ func (m *dbMock) ExpectField(name string, value interface{}) *dbMock {
 	return m
 }
 
-func (m *dbMock) ExpectChecker(checker func(sql string, args []driver.NamedValue) error) *dbMock {
+func (m *dbMock) ExpectFields(fields map[string]driver.Value) *dbMock {
+	for name, value := range fields {
+		m.fields[name] = value
+	}
+	return m
+}
+
+func (m *dbMock) ExpectChecker(checker func(opt, sql string, args []driver.NamedValue) error) *dbMock {
 	m.checker = checker
+	return m
+}
+
+func (m *dbMock) ExpectOpt(checker sqlmock.Argument) *dbMock {
+	m.optChecker = checker
 	return m
 }
 
@@ -148,7 +153,7 @@ func (m *dbMock) Return(returns interface{}) {
 	m.do(nil, nil, ModelToRows(returns))
 }
 
-func (m *dbMock) Insert(model schema.Tabler) *dbMock {
+func (m *dbMock) Create(model schema.Tabler) *dbMock {
 	var mm = m.createExpect(model)
 	mm.create = true
 	return mm
@@ -174,12 +179,13 @@ func (m *dbMock) Find(model schema.Tabler) *dbMock {
 
 func NewMockDB(tb TestingTB) *dbMock {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherFunc(func(expectedSQL, actualSQL string) error {
-		expectedSQL = strings.ReplaceAll(expectedSQL, "**", "*")
+		expectedSQL = strings.TrimSpace(strings.ReplaceAll(expectedSQL, "**", "*"))
+		actualSQL = strings.TrimSpace(strings.ReplaceAll(actualSQL, "  ", " "))
 
 		tb.Logf("\n expectedSQL => %s \n actualSQL   => %s \n matchSQL    => %v",
-			expectedSQL, actualSQL, match.Match(actualSQL, expectedSQL))
+			expectedSQL, actualSQL, match.Match(strings.ToUpper(actualSQL), strings.ToUpper(expectedSQL)))
 
-		if match.Match(actualSQL, expectedSQL) {
+		if match.Match(strings.ToUpper(actualSQL), strings.ToUpper(expectedSQL)) {
 			return nil
 		}
 
@@ -204,8 +210,8 @@ func NewMockDB(tb TestingTB) *dbMock {
 		Conn:                 db,
 		PreferSimpleProtocol: true,
 	}), &gorm.Config{
-		SkipDefaultTransaction: true,
-		Logger:                 logger.Default.LogMode(logger.Info),
+		//SkipDefaultTransaction: true,
+		Logger: logger.Default.LogMode(logger.Info),
 	})
 
 	if err != nil {

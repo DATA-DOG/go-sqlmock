@@ -13,7 +13,7 @@ const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
 type rowSets struct {
 	sets []*Rows
 	pos  int
-	ex   *ExpectedQuery
+	ex   *ExpectedSql
 	raw  [][]byte
 }
 

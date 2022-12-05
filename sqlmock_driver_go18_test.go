@@ -19,7 +19,7 @@ func TestContextExecCancel(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM users").
+	mock.ExpectSql(nil, "DELETE FROM users").
 		WillDelayFor(time.Second).
 		WillReturnResult(NewResult(1, 1))
 
@@ -101,7 +101,7 @@ func TestContextExecWithNamedArg(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM users").
+	mock.ExpectSql(nil, "DELETE FROM users").
 		WithArgs(sql.Named("id", 5)).
 		WillDelayFor(time.Second).
 		WillReturnResult(NewResult(1, 1))
@@ -140,7 +140,7 @@ func TestContextExec(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("DELETE FROM users").
+	mock.ExpectSql(nil, "DELETE FROM users").
 		WillReturnResult(NewResult(1, 1))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -179,7 +179,7 @@ func TestContextQueryCancel(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillDelayFor(time.Second).
 		WillReturnRows(rs)
@@ -267,7 +267,7 @@ func TestContextQuery(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id =").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id =").
 		WithArgs(sql.Named("id", 5)).
 		WillDelayFor(time.Millisecond * 3).
 		WillReturnRows(rs)
@@ -437,7 +437,7 @@ func TestContextExecErrorDelay(t *testing.T) {
 
 	// test that return of error is delayed
 	var delay time.Duration = 100 * time.Millisecond
-	mock.ExpectExec("^INSERT INTO articles").
+	mock.ExpectSql(nil, "^INSERT INTO articles").
 		WithArgs("hello").
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)
@@ -464,7 +464,7 @@ func TestContextExecErrorDelay(t *testing.T) {
 	}
 
 	// also test that return of error is not delayed
-	mock.ExpectExec("^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
+	mock.ExpectSql(nil, "^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
 
 	start = time.Now()
 	db.ExecContext(context.Background(), "INSERT INTO articles (title) VALUES (?)", "hello")

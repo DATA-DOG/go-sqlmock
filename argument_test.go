@@ -22,7 +22,7 @@ func TestAnyTimeArgument(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("INSERT INTO users").
+	mock.ExpectSql(nil, "INSERT INTO users").
 		WithArgs("john", AnyTime{}).
 		WillReturnResult(NewResult(1, 1))
 
@@ -45,7 +45,7 @@ func TestByteSliceArgument(t *testing.T) {
 	defer db.Close()
 
 	username := []byte("user")
-	mock.ExpectExec("INSERT INTO users").WithArgs(username).WillReturnResult(NewResult(1, 1))
+	mock.ExpectSql(nil, "INSERT INTO users").WithArgs(username).WillReturnResult(NewResult(1, 1))
 
 	_, err = db.Exec("INSERT INTO users(username) VALUES (?)", username)
 	if err != nil {

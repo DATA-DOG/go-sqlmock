@@ -187,6 +187,10 @@ func (c *sqlmock) doSql(opt string, query string, args []driver.NamedValue) (*Ex
 		}
 
 		if qr, ok := next.(*ExpectedSql); ok {
+			if qr.expectedOpt != nil && !qr.expectedOpt.Match(opt) {
+				return nil, fmt.Errorf("operation not match, expected:%s", opt)
+			}
+
 			if err := c.queryMatcher.Match(qr.expectSQL, query); err != nil {
 				next.Unlock()
 				continue
@@ -216,6 +220,10 @@ func (c *sqlmock) doSql(opt string, query string, args []driver.NamedValue) (*Ex
 	}
 
 	defer expected.Unlock()
+
+	if expected.expectedOpt != nil && !expected.expectedOpt.Match(opt) {
+		return nil, fmt.Errorf("operation not match, expected:%s", opt)
+	}
 
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
 		return nil, fmt.Errorf("query: %v", err)

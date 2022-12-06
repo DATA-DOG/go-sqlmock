@@ -7,6 +7,10 @@ import (
 )
 
 func jsonify(val interface{}) string {
+	if val == nil {
+		return "null"
+	}
+
 	var data, err = json.Marshal(val)
 	if err != nil {
 		log.Fatalln(err)

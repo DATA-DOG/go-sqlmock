@@ -254,6 +254,9 @@ linters:
     - errorlint
     - exhaustive
     - sqlclosecheck
+    - rowserrcheck
+    - staticcheck
+    - errchkjson
   disable-all: false
   presets:
     - bugs

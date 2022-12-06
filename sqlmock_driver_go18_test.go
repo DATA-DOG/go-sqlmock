@@ -532,8 +532,7 @@ func TestPingExpectationsErrorDelay(t *testing.T) {
 	}
 	defer db.Close()
 
-	var delay time.Duration
-	delay = 100 * time.Millisecond
+	var delay = 100 * time.Millisecond
 	mock.ExpectPing().
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)

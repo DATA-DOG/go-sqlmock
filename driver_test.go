@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-type void struct{}
-
-func (void) Print(...interface{}) {}
-
 type converter struct{}
 
 func (c *converter) ConvertValue(v interface{}) (driver.Value, error) {

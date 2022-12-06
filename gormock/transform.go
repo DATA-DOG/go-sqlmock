@@ -98,7 +98,7 @@ func selectSql(tableName string, where string) string {
 	return "SELECT * FROM" + fmt.Sprintf(` "%s" WHERE %s*`, tableName, where)
 }
 
-func parseVal(val interface{}) []driver.Value {
+func parseVal(val interface{}) []driver.Value { //nolint
 	var values []driver.Value
 	if val == nil {
 		values = append(values, nil)

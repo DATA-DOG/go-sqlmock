@@ -173,9 +173,7 @@ func (e *ExpectedSql) WillReturnResult(result driver.Result) *ExpectedSql {
 
 func (e *ExpectedSql) WillReturnRows(rows ...*Rows) *ExpectedSql {
 	sets := make([]*Rows, len(rows))
-	for i, r := range rows {
-		sets[i] = r
-	}
+	copy(sets, rows)
 	e.rows = &rowSets{sets: sets, ex: e}
 	return e
 }
@@ -212,7 +210,6 @@ type ExpectedPrepare struct {
 	commonExpectation
 	mock         *sqlmock
 	expectSQL    string
-	statement    driver.Stmt
 	closeErr     error
 	mustBeClosed bool
 	wasClosed    bool
@@ -302,7 +299,6 @@ func (e *ExpectedPing) String() string {
 
 type ExpectedOperation struct {
 	commonExpectation
-	arg Matcher
 }
 
 // WillReturnError allows to set an error for *sql.DB.Begin action

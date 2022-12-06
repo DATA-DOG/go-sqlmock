@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"database/sql/driver"
 	"testing"
 	"time"
 
@@ -98,6 +99,19 @@ func TestUpdate(t *testing.T) {
 		WithArgs(sqlmock.Any(), "sheep", "sheep").
 		ReturnResult(1, 1)
 	opt := mock.DB().Where("name = ?", "sheep").Updates(&User{Name: "sheep"})
+	assert.NoError(t, opt.Error)
+	assert.Equal(t, opt.RowsAffected, int64(1))
+
+	mock.Update(&User{}).
+		WithTx().
+		WithArgsChecker(func(args []driver.Value) error {
+			assert.Equal(t, len(args), 3)
+			assert.Equal(t, args[1], "sheep")
+			assert.Equal(t, args[2], "sheep")
+			return nil
+		}).
+		ReturnResult(1, 1)
+	opt = mock.DB().Where("name = ?", "sheep").Updates(&User{Name: "sheep"})
 	assert.NoError(t, opt.Error)
 	assert.Equal(t, opt.RowsAffected, int64(1))
 }

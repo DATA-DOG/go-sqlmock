@@ -40,31 +40,6 @@ func parseValue(table interface{}) []driver.Value {
 	return row
 }
 
-func parseWhere(table interface{}) (string, []driver.Value) {
-	column := parseColumn(table)
-	row := make([]driver.Value, 0, len(column))
-	s, err := schema.Parse(table, &sync.Map{}, schema.NamingStrategy{})
-	if err != nil {
-		return "", row
-	}
-
-	var sql = ""
-	var reflectValue = reflect.ValueOf(table)
-	for _, col := range column {
-		fv, zero := s.FieldsByDBName[col.DBName].ValueOf(context.Background(), reflectValue)
-		if zero {
-			continue
-		}
-
-		row = append(row, fv)
-		if sql != "" {
-			sql += " AND "
-		}
-		sql += fmt.Sprintf("%s *", col.DBName)
-	}
-	return sql, row
-}
-
 func ModelToRows(dst interface{}) *sqlmock.Rows {
 	if dst == nil {
 		return sqlmock.NewRows(nil)

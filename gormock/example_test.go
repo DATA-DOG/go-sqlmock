@@ -69,7 +69,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	mock.Create(u).
-		ExpectField("deleted_at", sqlmock.AnyArg()).
+		ExpectField("deleted_at", sqlmock.Any()).
 		ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
 			fmt.Println(opt, sql, args)
 			return nil

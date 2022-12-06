@@ -18,10 +18,10 @@ func TestStatementTX(t *testing.T) {
 	}
 	defer db.Close()
 
-	prep := mock.ExpectPrepare("SELECT")
+	mock.ExpectPrepare("SELECT")
 	mock.ExpectBegin()
 
-	prep.ExpectQuery().WithArgs(1).WillReturnError(errors.New("fast fail"))
+	mock.ExpectSql(nil, "SELECT").WithArgs(1).WillReturnError(errors.New("fast fail"))
 
 	stmt, err := db.Prepare("SELECT title, body FROM articles WHERE id = ?")
 	if err != nil {

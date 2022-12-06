@@ -36,7 +36,7 @@ func Example() {
 	// expect transaction begin
 	mock.ExpectBegin()
 	// expect query to fetch order, match it with regexp
-	mock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE").
+	mock.ExpectSql(nil, "SELECT (.+) FROM orders (.+) FOR UPDATE").
 		WithArgs(1).
 		WillReturnRows(NewRows(columns).AddRow(1, 1))
 	// expect transaction rollback, since order status is "cancelled"
@@ -65,7 +65,7 @@ func TestIssue14EscapeSQL(t *testing.T) {
 		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mock.ExpectExec("INSERT INTO mytable\\(a, b\\)").
+	mock.ExpectSql(nil, "INSERT INTO mytable\\(a, b\\)").
 		WithArgs("A", "B").
 		WillReturnResult(NewResult(1, 1))
 
@@ -89,7 +89,7 @@ func TestIssue4(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectQuery("some sql query which will not be called").
+	mock.ExpectSql(nil, "some sql query which will not be called").
 		WillReturnRows(NewRows([]string{"id"}))
 
 	if err := mock.ExpectationsWereMet(); err == nil {
@@ -107,7 +107,7 @@ func TestMockQuery(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs)
 
@@ -161,7 +161,7 @@ func TestMockQueryTypes(t *testing.T) {
 	rs := NewRows(columns)
 	rs.AddRow(5, timestamp, true)
 
-	mock.ExpectQuery("SELECT (.+) FROM sales WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM sales WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs)
 
@@ -276,7 +276,7 @@ func TestPrepareExpectations(t *testing.T) {
 	var title string
 	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs)
 
@@ -312,12 +312,12 @@ func TestPreparedQueryExecutions(t *testing.T) {
 	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?")
 
 	rs1 := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)
 
 	rs2 := NewRows([]string{"id", "title"}).AddRow("2", "whoop")
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(2).
 		WillReturnRows(rs2)
 
@@ -369,12 +369,12 @@ func TestUnorderedPreparedQueryExecutions(t *testing.T) {
 
 	mock.MatchExpectationsInOrder(false)
 
-	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").
-		ExpectQuery().
+	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?")
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(NewRows([]string{"id", "title"}).AddRow("5", "The quick brown fox"))
-	mock.ExpectPrepare("SELECT (.+) FROM authors WHERE id = ?").
-		ExpectQuery().
+	mock.ExpectPrepare("SELECT (.+) FROM authors WHERE id = ?")
+	mock.ExpectSql(nil, "SELECT (.+) FROM authors WHERE id = ?").
 		WithArgs(1).
 		WillReturnRows(NewRows([]string{"id", "title"}).AddRow("1", "Betty B."))
 
@@ -436,7 +436,7 @@ func TestWrongExpectations(t *testing.T) {
 	mock.ExpectBegin()
 
 	rs1 := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs1)
 
@@ -481,7 +481,7 @@ func TestExecExpectations(t *testing.T) {
 	defer db.Close()
 
 	result := NewResult(1, 1)
-	mock.ExpectExec("^INSERT INTO articles").
+	mock.ExpectSql(nil, "^INSERT INTO articles").
 		WithArgs("hello").
 		WillReturnResult(result)
 
@@ -525,7 +525,7 @@ func TestRowBuilderAndNilTypes(t *testing.T) {
 		AddRow(1, true, time.Now(), 5).
 		AddRow(2, false, nil, nil)
 
-	mock.ExpectQuery("SELECT (.+) FROM sales").WillReturnRows(rs)
+	mock.ExpectSql(nil, "SELECT (.+) FROM sales").WillReturnRows(rs)
 
 	rows, err := db.Query("SELECT * FROM sales")
 	if err != nil {
@@ -615,7 +615,7 @@ func TestArgumentReflectValueTypeError(t *testing.T) {
 
 	rs := NewRows([]string{"id"}).AddRow(1)
 
-	mock.ExpectQuery("SELECT (.+) FROM sales").WithArgs(5.5).WillReturnRows(rs)
+	mock.ExpectSql(nil, "SELECT (.+) FROM sales").WithArgs(5.5).WillReturnRows(rs)
 
 	_, err = db.Query("SELECT * FROM sales WHERE x = ?", 5)
 	if err == nil {
@@ -636,9 +636,9 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 
 	result := NewResult(1, 1)
 
-	mock.ExpectExec("^UPDATE one").WithArgs("one").WillReturnResult(result)
-	mock.ExpectExec("^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
-	mock.ExpectExec("^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE one").WithArgs("one").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
@@ -676,9 +676,9 @@ func ExampleSqlmock_goroutines() {
 
 	result := NewResult(1, 1)
 
-	mock.ExpectExec("^UPDATE one").WithArgs("one").WillReturnResult(result)
-	mock.ExpectExec("^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
-	mock.ExpectExec("^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE one").WithArgs("one").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE two").WithArgs("one", "two").WillReturnResult(result)
+	mock.ExpectSql(nil, "^UPDATE three").WithArgs("one", "two", "three").WillReturnResult(result)
 
 	var wg sync.WaitGroup
 	queries := map[string][]interface{}{
@@ -709,8 +709,8 @@ func ExampleSqlmock_goroutines() {
 // see #37 issue
 func TestRunExecsWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 	db, dbmock, _ := New()
-	dbmock.ExpectExec("THE FIRST EXEC")
-	dbmock.ExpectExec("THE SECOND EXEC")
+	dbmock.ExpectSql(nil, "THE FIRST EXEC")
+	dbmock.ExpectSql(nil, "THE SECOND EXEC")
 
 	_, _ = db.Exec("THE FIRST EXEC")
 	_, _ = db.Exec("THE WRONG EXEC")
@@ -725,8 +725,8 @@ func TestRunExecsWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 // see #37 issue
 func TestRunQueriesWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 	db, dbmock, _ := New()
-	dbmock.ExpectQuery("THE FIRST QUERY")
-	dbmock.ExpectQuery("THE SECOND QUERY")
+	mock.ExpectSql(nil, "THE FIRST QUERY")
+	mock.ExpectSql(nil, "THE SECOND QUERY")
 
 	_, _ = db.Query("THE FIRST QUERY")
 	_, _ = db.Query("THE WRONG QUERY")
@@ -739,8 +739,8 @@ func TestRunQueriesWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 
 func TestRunExecsWithExpectedErrorMeetsExpectations(t *testing.T) {
 	db, dbmock, _ := New()
-	dbmock.ExpectExec("THE FIRST EXEC").WillReturnError(fmt.Errorf("big bad bug"))
-	dbmock.ExpectExec("THE SECOND EXEC").WillReturnResult(NewResult(0, 0))
+	dbmock.ExpectSql(nil, "THE FIRST EXEC").WillReturnError(fmt.Errorf("big bad bug"))
+	dbmock.ExpectSql(nil, "THE SECOND EXEC").WillReturnResult(NewResult(0, 0))
 
 	_, _ = db.Exec("THE FIRST EXEC")
 	_, _ = db.Exec("THE SECOND EXEC")
@@ -753,8 +753,8 @@ func TestRunExecsWithExpectedErrorMeetsExpectations(t *testing.T) {
 
 func TestRunQueryWithExpectedErrorMeetsExpectations(t *testing.T) {
 	db, dbmock, _ := New()
-	dbmock.ExpectQuery("THE FIRST QUERY").WillReturnError(fmt.Errorf("big bad bug"))
-	dbmock.ExpectQuery("THE SECOND QUERY").WillReturnRows(NewRows([]string{"col"}).AddRow(1))
+	mock.ExpectSql(nil, "THE FIRST QUERY").WillReturnError(fmt.Errorf("big bad bug"))
+	mock.ExpectSql(nil, "THE SECOND QUERY").WillReturnRows(NewRows([]string{"col"}).AddRow(1))
 
 	_, _ = db.Query("THE FIRST QUERY")
 	_, _ = db.Query("THE SECOND QUERY")
@@ -775,7 +775,7 @@ func TestEmptyRowSet(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"})
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillReturnRows(rs)
 
@@ -832,7 +832,7 @@ func TestRollbackThrow(t *testing.T) {
 	// expect transaction begin
 	mock.ExpectBegin()
 	// expect query to fetch order, match it with regexp
-	mock.ExpectQuery("SELECT (.+) FROM orders (.+) FOR UPDATE").
+	mock.ExpectSql(nil, "SELECT (.+) FROM orders (.+) FOR UPDATE").
 		WithArgs(1).
 		WillReturnRows(NewRows(columns).AddRow(1, 1))
 	// expect transaction rollback, since order status is "cancelled"
@@ -959,9 +959,9 @@ func TestPrepareExec(t *testing.T) {
 	}
 	defer db.Close()
 	mock.ExpectBegin()
-	ep := mock.ExpectPrepare("INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)")
+	mock.ExpectPrepare("INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)")
 	for i := 0; i < 3; i++ {
-		ep.ExpectExec().WithArgs(i, "Hello"+strconv.Itoa(i)).WillReturnResult(NewResult(1, 1))
+		mock.ExpectSql(nil, "INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)").WithArgs(i, "Hello"+strconv.Itoa(i)).WillReturnResult(NewResult(1, 1))
 	}
 	mock.ExpectCommit()
 	tx, _ := db.Begin()
@@ -991,8 +991,8 @@ func TestPrepareQuery(t *testing.T) {
 	}
 	defer db.Close()
 	mock.ExpectBegin()
-	ep := mock.ExpectPrepare("SELECT ID, STATUS FROM ORDERS WHERE ID = \\?")
-	ep.ExpectQuery().WithArgs(101).WillReturnRows(NewRows([]string{"ID", "STATUS"}).AddRow(101, "Hello"))
+	mock.ExpectPrepare("SELECT ID, STATUS FROM ORDERS WHERE ID = \\?")
+	mock.ExpectSql(nil, "SELECT ID, STATUS FROM ORDERS WHERE ID = \\?").WithArgs(101).WillReturnRows(NewRows([]string{"ID", "STATUS"}).AddRow(101, "Hello"))
 	mock.ExpectCommit()
 	tx, _ := db.Begin()
 	stmt, err := tx.Prepare("SELECT ID, STATUS FROM ORDERS WHERE ID = ?")
@@ -1074,8 +1074,8 @@ func TestPreparedStatementCloseExpectation(t *testing.T) {
 	}
 	defer db.Close()
 
-	ep := mock.ExpectPrepare("INSERT INTO ORDERS").WillBeClosed()
-	ep.ExpectExec().WithArgs(1, "Hello").WillReturnResult(NewResult(1, 1))
+	mock.ExpectPrepare("INSERT INTO ORDERS").WillBeClosed()
+	mock.ExpectSql(nil, "INSERT INTO ORDERS").WithArgs(1, "Hello").WillReturnResult(NewResult(1, 1))
 
 	stmt, err := db.Prepare("INSERT INTO ORDERS(ID, STATUS) VALUES (?, ?)")
 	if err != nil {
@@ -1105,7 +1105,7 @@ func TestExecExpectationErrorDelay(t *testing.T) {
 
 	// test that return of error is delayed
 	var delay time.Duration = 100 * time.Millisecond
-	mock.ExpectExec("^INSERT INTO articles").
+	mock.ExpectSql(nil, "^INSERT INTO articles").
 		WithArgs("hello").
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)
@@ -1132,7 +1132,7 @@ func TestExecExpectationErrorDelay(t *testing.T) {
 	}
 
 	// also test that return of error is not delayed
-	mock.ExpectExec("^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
+	mock.ExpectSql(nil, "^INSERT INTO articles").WillReturnError(errors.New("fast fail"))
 
 	start = time.Now()
 	db.Exec("INSERT INTO articles (title) VALUES (?)", "hello")
@@ -1184,7 +1184,7 @@ func TestQueryWithTimeout(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
 
-	mock.ExpectQuery("SELECT (.+) FROM articles WHERE id = ?").
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WillDelayFor(15 * time.Millisecond). // Query will take longer than timeout
 		WithArgs(5).
 		WillReturnRows(rs)
@@ -1232,10 +1232,10 @@ func Test_sqlmock_Prepare_and_Exec(t *testing.T) {
 
 	mock.ExpectPrepare("SELECT (.+) FROM users WHERE (.+)")
 	expected := NewResult(1, 1)
-	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").
+	mock.ExpectSql(nil, "SELECT (.+) FROM users WHERE (.+)").WithArgs("test").
 		WillReturnResult(expected)
 	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
+	mock.ExpectSql(nil, "SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
 
 	got, err := mock.(*sqlmock).Prepare(query)
 	if err != nil {
@@ -1284,16 +1284,16 @@ func Test_sqlmock_Exec(t *testing.T) {
 	}
 
 	expected := NewResult(1, 1)
-	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").
+	mock.ExpectSql(nil, "SELECT (.+) FROM users WHERE (.+)").
 		WillReturnResult(expected).
 		WithArgs("test")
 
 	matchErr := errors.New("matcher sqlmock.failArgument could not match 0 argument driver.NamedValue - {Name: Ordinal:1 Value:{}}")
-	mock.ExpectExec("SELECT (.+) FROM animals WHERE (.+)").
+	mock.ExpectSql(nil, "SELECT (.+) FROM animals WHERE (.+)").
 		WillReturnError(matchErr).
 		WithArgs(failArgument{})
 
-	mock.ExpectExec("").WithArgs(failArgument{})
+	mock.ExpectSql(nil, "").WithArgs(failArgument{})
 
 	mock.(*sqlmock).expected = mock.(*sqlmock).expected[1:]
 	query := "SELECT name, email FROM users WHERE name = ?"
@@ -1328,7 +1328,7 @@ func Test_sqlmock_Query(t *testing.T) {
 	}
 	defer db.Close()
 	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
+	mock.ExpectSql(nil, "SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
 	query := "SELECT name, email FROM users WHERE name = ?"
 	rows, err := mock.(*sqlmock).Query(query, []driver.Value{"test"})
 	if err != nil {

@@ -57,8 +57,8 @@ func TestPreparedStatementContextExecCancel(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectPrepare("DELETE FROM users").
-		ExpectExec().
+	mock.ExpectPrepare("DELETE FROM users")
+	mock.ExpectSql(nil, "DELETE FROM users").
 		WillDelayFor(time.Second).
 		WillReturnResult(NewResult(1, 1))
 
@@ -220,8 +220,8 @@ func TestPreparedStatementContextQueryCancel(t *testing.T) {
 
 	rs := NewRows([]string{"id", "title"}).AddRow(5, "hello world")
 
-	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?").
-		ExpectQuery().
+	mock.ExpectPrepare("SELECT (.+) FROM articles WHERE id = ?")
+	mock.ExpectSql(nil, "SELECT (.+) FROM articles WHERE id = ?").
 		WithArgs(5).
 		WillDelayFor(time.Second).
 		WillReturnRows(rs)

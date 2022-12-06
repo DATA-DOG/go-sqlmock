@@ -130,7 +130,7 @@ type ExpectedSql struct {
 	rowsMustBeClosed bool
 	rowsWereClosed   bool
 	result           driver.Result
-	expectedOpt      Argument
+	expectedOpt      Matcher
 }
 
 // WithArgsCheck match sql args
@@ -141,7 +141,7 @@ func (e *ExpectedSql) WithArgsCheck(checkArgs func(opt string, sql string, args 
 
 // WithArgs will match given expected args to actual database query arguments.
 // if at least one argument does not match, it will return an error. For specific
-// arguments an sqlmock.Argument interface can be used to match an argument.
+// arguments an sqlmock.Matcher interface can be used to match an argument.
 func (e *ExpectedSql) WithArgs(args ...driver.Value) *ExpectedSql {
 	e.args = args
 	return e
@@ -302,7 +302,7 @@ func (e *ExpectedPing) String() string {
 
 type ExpectedOperation struct {
 	commonExpectation
-	arg Argument
+	arg Matcher
 }
 
 // WillReturnError allows to set an error for *sql.DB.Begin action

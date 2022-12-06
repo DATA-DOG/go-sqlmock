@@ -27,8 +27,8 @@ func (c *sqlmock) ExpectPing() *ExpectedPing {
 	return e
 }
 
-func (c *sqlmock) ExpectSql(expectedOpt Argument, expectedSQL string) *ExpectedSql {
-	var match = AnyArg()
+func (c *sqlmock) ExpectSql(expectedOpt Matcher, expectedSQL string) *ExpectedSql {
+	var match = Any()
 	if expectedOpt != nil {
 		match = expectedOpt
 	}

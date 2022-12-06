@@ -23,7 +23,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 	// @TODO should we assert either all args are named or ordinal?
 	for k, v := range args {
 		// custom argument matcher
-		matcher, ok := e.args[k].(Argument)
+		matcher, ok := e.args[k].(Matcher)
 		if ok {
 			if !matcher.Match(v.Value) {
 				return fmt.Errorf("matcher %T could not match %d argument %T - %+v", matcher, k, args[k], args[k])

@@ -8,13 +8,13 @@ import (
 
 type AnyTime struct{}
 
-// Match satisfies sqlmock.Argument interface
+// Match satisfies sqlmock.Matcher interface
 func (a AnyTime) Match(v driver.Value) bool {
 	_, ok := v.(time.Time)
 	return ok
 }
 
-func TestAnyTimeArgument(t *testing.T) {
+func TestAnyTimeMatcher(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
 	if err != nil {
@@ -36,7 +36,7 @@ func TestAnyTimeArgument(t *testing.T) {
 	}
 }
 
-func TestByteSliceArgument(t *testing.T) {
+func TestByteSliceMatcher(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
 	if err != nil {

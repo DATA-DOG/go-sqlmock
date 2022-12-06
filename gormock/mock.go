@@ -28,7 +28,7 @@ type dbMock struct {
 	column     []string
 	tableName  string
 	checker    func(opt string, sql string, args []driver.NamedValue) error
-	optChecker sqlmock.Argument
+	optChecker sqlmock.Matcher
 }
 
 func (m *dbMock) Mock() sqlmock.Sqlmock { return m.mock }
@@ -136,7 +136,7 @@ func (m *dbMock) ExpectChecker(checker func(opt, sql string, args []driver.Named
 	return m
 }
 
-func (m *dbMock) ExpectOpt(checker sqlmock.Argument) *dbMock {
+func (m *dbMock) ExpectOpt(checker sqlmock.Matcher) *dbMock {
 	m.optChecker = checker
 	return m
 }

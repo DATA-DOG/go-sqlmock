@@ -60,7 +60,7 @@ func TestQueryExpectationArgComparison(t *testing.T) {
 		t.Error("arguments should match, but it did not")
 	}
 
-	e.args = []driver.Value{5, AnyArg()}
+	e.args = []driver.Value{5, Any()}
 	if err := e.argsMatches(against); err != nil {
 		t.Errorf("arguments should match, but it did not: %s", err)
 	}

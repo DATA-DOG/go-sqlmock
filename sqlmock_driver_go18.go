@@ -197,7 +197,7 @@ func (c *sqlmock) doSql(opt string, query string, args []driver.NamedValue) (*Ex
 			}
 
 			if qr.checkArgs != nil {
-				if err := qr.checkArgs(opt, query, args); err == nil {
+				if err := qr.checkArgs(convValue(args)); err == nil {
 					expected = qr
 					break
 				}
@@ -230,11 +230,11 @@ func (c *sqlmock) doSql(opt string, query string, args []driver.NamedValue) (*Ex
 	}
 
 	if expected.checkArgs != nil {
-		if err := expected.checkArgs(opt, query, args); err != nil {
+		if err := expected.checkArgs(convValue(args)); err != nil {
 			return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
 		}
 	} else {
-		if err := expected.argsMatches(args); err != nil {
+		if err := expected.attemptArgMatch(args); err != nil {
 			return nil, fmt.Errorf("query '%s', arguments do not match: %s", query, err)
 		}
 	}

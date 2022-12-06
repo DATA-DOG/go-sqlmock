@@ -10,9 +10,7 @@ import (
 var pool *mockDriver
 
 func init() {
-	pool = &mockDriver{
-		connMap: make(map[string]*sqlmock),
-	}
+	pool = &mockDriver{connMap: make(map[string]*sqlmock)}
 	sql.Register("sqlmock", pool)
 }
 

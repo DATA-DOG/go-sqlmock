@@ -1,8 +1,10 @@
 package e2e
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/pubgo/sqlmock"
@@ -24,11 +26,13 @@ type dbMock struct {
 	create     bool
 	tx         bool
 	prepare    bool
-	fields     map[string]driver.Value
-	column     []string
+	column     []*schema.Field
 	tableName  string
-	checker    func(opt string, sql string, args []driver.NamedValue) error
+	checker    func(args []driver.Value) error
 	optChecker sqlmock.Matcher
+	model      schema.Tabler
+	sql        string
+	args       []driver.Value
 }
 
 func (m *dbMock) Mock() sqlmock.Sqlmock { return m.mock }
@@ -44,9 +48,9 @@ func (m *dbMock) createExpect(model schema.Tabler) *dbMock {
 		mock:      m.mock,
 		db:        m.db,
 		tb:        m.tb,
+		model:     model,
 		tableName: model.TableName(),
 		column:    parseColumn(model),
-		fields:    parseField(model),
 	}
 }
 
@@ -56,21 +60,12 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 	}
 
 	var sql = ""
-	var args []driver.Value
-	for _, name := range m.column {
-		var val, ok = m.fields[name]
-		if ok {
-			sql += fmt.Sprintf("%s *", name)
-			args = append(args, parseVal(val)...)
-		}
-	}
-
 	if m.query {
 		sql = selectSql(m.tableName, sql)
 	}
 
 	if m.create {
-		sql = insertSql(m.tableName, sql)
+		sql = insertSql(m.tableName)
 	}
 
 	if m.update {
@@ -87,7 +82,39 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 
 	e := m.mock.ExpectSql(m.optChecker, sql)
 	e = e.WithArgsCheck(m.checker)
-	e = e.WithArgs(args...)
+
+	if m.create {
+		var args []driver.Value
+		var reflectValue = reflect.ValueOf(m.model)
+		for _, name := range m.column {
+			if name.PrimaryKey {
+				continue
+			}
+
+			fv, _ := name.ValueOf(context.Background(), reflectValue)
+			args = append(args, fv)
+		}
+		e = e.WithArgs(args...)
+	}
+
+	if m.query || m.delete {
+		var args []driver.Value
+		var reflectValue = reflect.ValueOf(m.model)
+		for _, name := range m.column {
+			fv, zero := name.ValueOf(context.Background(), reflectValue)
+			if zero {
+				continue
+			}
+
+			args = append(args, fv)
+		}
+		e = e.WithArgs(args...)
+	}
+
+	if len(m.args) > 0 {
+		e = e.WithArgs(m.args...)
+	}
+
 	if err != nil {
 		e = e.WillReturnError(err)
 	}
@@ -109,34 +136,27 @@ func (m *dbMock) do(err error, ret driver.Result, rows *sqlmock.Rows) {
 	}
 }
 
-func (m *dbMock) ExpectTx() *dbMock {
+func (m *dbMock) WithTx() *dbMock {
 	m.tx = true
 	return m
 }
 
-func (m *dbMock) ExpectPrepare() *dbMock {
+func (m *dbMock) WithArgs(args ...driver.Value) *dbMock {
+	m.args = args
+	return m
+}
+
+func (m *dbMock) WithPrepare() *dbMock {
 	m.prepare = true
 	return m
 }
 
-func (m *dbMock) ExpectField(name string, value interface{}) *dbMock {
-	m.fields[name] = value
-	return m
-}
-
-func (m *dbMock) ExpectFields(fields map[string]driver.Value) *dbMock {
-	for name, value := range fields {
-		m.fields[name] = value
-	}
-	return m
-}
-
-func (m *dbMock) ExpectChecker(checker func(opt, sql string, args []driver.NamedValue) error) *dbMock {
+func (m *dbMock) WithArgsChecker(checker func(args []driver.Value) error) *dbMock {
 	m.checker = checker
 	return m
 }
 
-func (m *dbMock) ExpectOpt(checker sqlmock.Matcher) *dbMock {
+func (m *dbMock) WithOpt(checker sqlmock.Matcher) *dbMock {
 	m.optChecker = checker
 	return m
 }
@@ -151,6 +171,11 @@ func (m *dbMock) ReturnResult(lastInsertID int64, rowsAffected int64) {
 
 func (m *dbMock) Return(returns interface{}) {
 	m.do(nil, nil, ModelToRows(returns))
+}
+
+func (m *dbMock) Sql(sql string) *dbMock {
+	m.sql = sql
+	return m
 }
 
 func (m *dbMock) Create(model schema.Tabler) *dbMock {
@@ -182,12 +207,12 @@ func NewMockDB(tb TestingTB) *dbMock {
 		expectedSQL = strings.TrimSpace(strings.ReplaceAll(expectedSQL, "**", "*"))
 		actualSQL = strings.TrimSpace(strings.ReplaceAll(actualSQL, "  ", " "))
 
-		tb.Logf("\n expectedSQL => %s \n actualSQL   => %s \n matchSQL    => %v",
-			expectedSQL, actualSQL, match.Match(strings.ToUpper(actualSQL), strings.ToUpper(expectedSQL)))
-
 		if match.Match(strings.ToUpper(actualSQL), strings.ToUpper(expectedSQL)) {
 			return nil
 		}
+
+		tb.Logf("sql not match\n expectedSQL => %s \n actualSQL   => %s \n matchSQL    => %v",
+			expectedSQL, actualSQL, match.Match(strings.ToUpper(actualSQL), strings.ToUpper(expectedSQL)))
 
 		return fmt.Errorf(`could not match actual sql: "%s" with expected regexp "%s"`, actualSQL, expectedSQL)
 	})))

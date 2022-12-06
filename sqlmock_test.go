@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pubgo/sqlmock/internal"
+	"github.com/stretchr/testify/assert"
 )
 
 func cancelOrder(db *sql.DB, orderID int) error {
@@ -271,7 +272,7 @@ func TestPrepareExpectations(t *testing.T) {
 		t.Errorf("stmt was expected while creating a prepared statement")
 	}
 
-	// expect something else, w/o ExpectPrepare()
+	// expect something else, w/o WithPrepare()
 	var id int
 	var title string
 	rs := NewRows([]string{"id", "title"}).AddRow("5", "hello world")
@@ -724,17 +725,17 @@ func TestRunExecsWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
 // False Positive - passes despite mismatched Exec
 // see #37 issue
 func TestRunQueriesWithOrderedShouldNotMeetAllExpectations(t *testing.T) {
-	db, dbmock, _ := New()
-	mock.ExpectSql(nil, "THE FIRST QUERY")
-	mock.ExpectSql(nil, "THE SECOND QUERY")
+	db, dbmock, err := New()
+	assert.Nil(t, err)
+
+	dbmock.ExpectSql(Query(), "THE FIRST QUERY")
+	dbmock.ExpectSql(Query(), "THE SECOND QUERY")
 
 	_, _ = db.Query("THE FIRST QUERY")
 	_, _ = db.Query("THE WRONG QUERY")
 
-	err := dbmock.ExpectationsWereMet()
-	if err == nil {
-		t.Fatal("was expecting an error, but there wasn't any")
-	}
+	err = dbmock.ExpectationsWereMet()
+	assert.NotNil(t, err, "was expecting an error, but there wasn't any")
 }
 
 func TestRunExecsWithExpectedErrorMeetsExpectations(t *testing.T) {

@@ -5,58 +5,37 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/pubgo/sqlmock"
 	"gorm.io/gorm/schema"
 )
 
-func parseColumn(table interface{}) []string {
-	column := make([]string, 0)
+func parseColumn(table interface{}) []*schema.Field {
+	column := make([]*schema.Field, 0)
 	s, err := schema.Parse(table, &sync.Map{}, schema.NamingStrategy{})
 	if err != nil {
 		return column
 	}
 	for _, v := range s.Fields {
 		if len(v.DBName) != 0 {
-			column = append(column, v.DBName)
+			column = append(column, v)
 		}
 	}
 	return column
 }
 
-func parseValue(table interface{}, column []string) []driver.Value {
-	row := make([]driver.Value, 0, len(column))
+func parseValue(table interface{}) []driver.Value {
+	var row []driver.Value
 	s, err := schema.Parse(table, &sync.Map{}, schema.NamingStrategy{})
 	if err != nil {
 		return row
 	}
 
 	var reflectValue = reflect.ValueOf(table)
-	for _, col := range column {
-		fv, _ := s.FieldsByDBName[col].ValueOf(context.Background(), reflectValue)
+	for _, col := range parseColumn(table) {
+		fv, _ := s.FieldsByDBName[col.DBName].ValueOf(context.Background(), reflectValue)
 		row = append(row, fv)
-	}
-	return row
-}
-
-func parseField(table interface{}) map[string]driver.Value {
-	row := make(map[string]driver.Value)
-	s, err := schema.Parse(table, &sync.Map{}, schema.NamingStrategy{})
-	if err != nil {
-		return row
-	}
-
-	column := parseColumn(table)
-	var reflectValue = reflect.ValueOf(table)
-	for _, col := range column {
-		fv, zero := s.FieldsByDBName[col].ValueOf(context.Background(), reflectValue)
-		if zero {
-			continue
-		}
-
-		row[col] = fv
 	}
 	return row
 }
@@ -72,7 +51,7 @@ func parseWhere(table interface{}) (string, []driver.Value) {
 	var sql = ""
 	var reflectValue = reflect.ValueOf(table)
 	for _, col := range column {
-		fv, zero := s.FieldsByDBName[col].ValueOf(context.Background(), reflectValue)
+		fv, zero := s.FieldsByDBName[col.DBName].ValueOf(context.Background(), reflectValue)
 		if zero {
 			continue
 		}
@@ -81,7 +60,7 @@ func parseWhere(table interface{}) (string, []driver.Value) {
 		if sql != "" {
 			sql += " AND "
 		}
-		sql += fmt.Sprintf("%s *", col)
+		sql += fmt.Sprintf("%s *", col.DBName)
 	}
 	return sql, row
 }
@@ -99,24 +78,28 @@ func ModelToRows(dst interface{}) *sqlmock.Rows {
 
 	var values []interface{}
 	if vv.Kind() == reflect.Array || vv.Kind() == reflect.Slice {
-		columns = parseColumn(vv.Index(0).Interface())
+		for _, f := range parseColumn(vv.Index(0).Interface()) {
+			columns = append(columns, f.DBName)
+		}
 		for i := 0; i < vv.Len(); i++ {
 			values = append(values, vv.Index(i).Interface())
 		}
 	} else {
-		columns = parseColumn(dst)
+		for _, f := range parseColumn(dst) {
+			columns = append(columns, f.DBName)
+		}
 		values = append(values, dst)
 	}
 
 	rows := sqlmock.NewRows(columns)
 	for i := range values {
-		rows.AddRow(parseValue(values[i], columns)...)
+		rows.AddRow(parseValue(values[i])...)
 	}
 	return rows
 }
 
-func insertSql(tableName string, sql string) string {
-	return "INSERT INTO" + fmt.Sprintf(` "%s" *%s VALUES *`, tableName, strings.ReplaceAll(sql, " ", ""))
+func insertSql(tableName string) string {
+	return "INSERT INTO" + fmt.Sprintf(` "%s" *`, tableName)
 }
 
 func deleteSql(tableName string, where string) string {
@@ -128,7 +111,7 @@ func deleteSql(tableName string, where string) string {
 
 func updateSql(tableName string, where string) string {
 	if where == "" {
-		return "UPDATE" + fmt.Sprintf(` "%s" SET`, tableName)
+		return "UPDATE" + fmt.Sprintf(` "%s" SET*`, tableName)
 	}
 	return "UPDATE" + fmt.Sprintf(` "%s" SET * WHERE %s*`, tableName, where)
 }

@@ -2,7 +2,17 @@ package sqlmock
 
 import (
 	"database/sql/driver"
+	"encoding/json"
+	"log"
 )
+
+func jsonify(val interface{}) string {
+	var data, err = json.Marshal(val)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return string(data)
+}
 
 func convNameValue(args []driver.Value) []driver.NamedValue {
 	namedArgs := make([]driver.NamedValue, len(args))
@@ -18,6 +28,14 @@ func convNameValue(args []driver.Value) []driver.NamedValue {
 		}
 	}
 	return namedArgs
+}
+
+func convValue(args []driver.NamedValue) []driver.Value {
+	values := make([]driver.Value, len(args))
+	for i := range args {
+		values[i] = args[i].Value
+	}
+	return values
 }
 
 func rawBytes(col driver.Value) (_ []byte, ok bool) {

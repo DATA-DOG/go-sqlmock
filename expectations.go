@@ -134,7 +134,7 @@ type ExpectedSql struct {
 }
 
 // WithArgsCheck match sql args
-func (e *ExpectedSql) WithArgsCheck(checkArgs func(opt string, sql string, args []driver.NamedValue) error) *ExpectedSql {
+func (e *ExpectedSql) WithArgsCheck(checkArgs func(args []driver.Value) error) *ExpectedSql {
 	e.checkArgs = checkArgs
 	return e
 }
@@ -207,7 +207,7 @@ func (e *ExpectedSql) String() string {
 }
 
 // ExpectedPrepare is used to manage *sql.DB.Prepare or *sql.Tx.Prepare expectations.
-// Returned by *Sqlmock.ExpectPrepare.
+// Returned by *Sqlmock.WithPrepare.
 type ExpectedPrepare struct {
 	commonExpectation
 	mock         *sqlmock
@@ -268,7 +268,7 @@ type queryBasedExpectation struct {
 	expectSQL string
 	converter driver.ValueConverter
 	args      []driver.Value
-	checkArgs func(opt string, sql string, args []driver.NamedValue) error
+	checkArgs func(args []driver.Value) error
 }
 
 // ExpectedPing is used to manage *sql.DB.Ping expectations.

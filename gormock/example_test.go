@@ -2,8 +2,6 @@ package e2e
 
 import (
 	"context"
-	"database/sql/driver"
-	"fmt"
 	"testing"
 	"time"
 
@@ -38,15 +36,13 @@ func (u TestTab) TableName() string {
 func Test_Select(t *testing.T) {
 	mock := NewMockDB(t)
 
-	mock.Find(&TestTab{ID: 1}).ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
-		fmt.Println(opt, sql, args)
-		return nil
-	}).Return(&TestTab{
-		ID:    1,
-		Name:  "test",
-		CTime: 1630250445,
-		MTime: 1630250445,
-	})
+	mock.Find(&TestTab{ID: 1}).
+		Return(&TestTab{
+			ID:    1,
+			Name:  "test",
+			CTime: 1630250445,
+			MTime: 1630250445,
+		})
 
 	var testTab *TestTab
 	err := mock.DB().WithContext(context.Background()).Where("id = ?", 1).Find(&testTab).Error
@@ -69,11 +65,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	mock.Create(u).
-		ExpectField("deleted_at", sqlmock.Any()).
-		ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
-			fmt.Println(opt, sql, args)
-			return nil
-		}).
+		WithTx().
 		Return(&User{
 			ID:   2,
 			Name: "sheep",
@@ -90,11 +82,9 @@ func TestDelete(t *testing.T) {
 	mock := NewMockDB(t)
 
 	mock.Delete(&User{Name: "sheep"}).
-		ExpectTx().
-		ExpectChecker(func(opt, sql string, args []driver.NamedValue) error {
-			fmt.Println(opt, sql, args)
-			return nil
-		}).ReturnResult(1, 1)
+		WithTx().
+		ReturnResult(1, 1)
+
 	ret := mock.DB().Where("name = ?", "sheep").Delete(&User{})
 	assert.NoError(t, ret.Error)
 	assert.Equal(t, ret.RowsAffected, int64(1))
@@ -103,9 +93,13 @@ func TestDelete(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	mock := NewMockDB(t)
 
-	mock.Update(&User{Name: "sheep"}).ExpectTx().ReturnResult(1, 1)
-	err := mock.DB().Where("name = ?", "sheep").Updates(&User{Name: "sheep"}).Error
-	assert.NoError(t, err)
+	mock.Update(&User{}).
+		WithTx().
+		WithArgs(sqlmock.Any(), "sheep", "sheep").
+		ReturnResult(1, 1)
+	opt := mock.DB().Where("name = ?", "sheep").Updates(&User{Name: "sheep"})
+	assert.NoError(t, opt.Error)
+	assert.Equal(t, opt.RowsAffected, int64(1))
 }
 
 func TestFindById(t *testing.T) {
@@ -128,7 +122,7 @@ func TestFindById(t *testing.T) {
 	assert.Equal(t, user.Name, "hello")
 
 	mock.Find(&User{}).
-		ExpectField("id", []int{1, 2}).
+		WithArgs(1, 2).
 		Return(&User{
 			ID:   2,
 			Name: "hello1",
@@ -140,16 +134,17 @@ func TestFindById(t *testing.T) {
 	assert.NotNil(t, user1)
 	assert.Equal(t, user1.Name, "hello1")
 
-	mock.Find(&User{ID: 3}).Return([]*User{
-		{
-			ID:   2,
-			Name: "hello2",
-		},
-		{
-			ID:   3,
-			Name: "hello3",
-		},
-	})
+	mock.Find(&User{ID: 3}).
+		Return([]*User{
+			{
+				ID:   2,
+				Name: "hello2",
+			},
+			{
+				ID:   3,
+				Name: "hello3",
+			},
+		})
 
 	var user2 []*User
 	err = mock.DB().Select("id").Where("id = ?", 3).Find(&user2).Error

@@ -7,19 +7,16 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"log"
 	"reflect"
 )
 
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
-	if nil == e.args {
-		if len(args) > 0 {
-			return fmt.Errorf("expected 0, but got %d arguments", len(args))
-		}
-		return nil
-	}
 	if len(args) != len(e.args) {
+		log.Printf("arguments not match\n expected => %s\n actual   => %s \n", jsonify(e.args), jsonify(convValue(args)))
 		return fmt.Errorf("expected %d, but got %d arguments", len(e.args), len(args))
 	}
+
 	// @TODO should we assert either all args are named or ordinal?
 	for k, v := range args {
 		// custom argument matcher

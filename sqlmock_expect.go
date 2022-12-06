@@ -45,15 +45,18 @@ func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error)
 	if err != nil {
 		return db, c, err
 	}
+
 	for _, option := range options {
 		err := option(c)
 		if err != nil {
 			return db, c, err
 		}
 	}
+
 	if c.converter == nil {
 		c.converter = driver.DefaultParameterConverter
 	}
+
 	if c.queryMatcher == nil {
 		c.queryMatcher = QueryMatcherRegexp
 	}

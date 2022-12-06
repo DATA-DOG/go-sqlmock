@@ -18,19 +18,6 @@ func ExampleNewErrorResult() {
 	// Output: some error
 }
 
-func ExampleNewResult() {
-	var lastInsertID, affected int64
-	result := NewResult(lastInsertID, affected)
-	mock.ExpectSql(nil, "^INSERT (.+)").WillReturnResult(result)
-	fmt.Println(mock.ExpectationsWereMet())
-	// Output: there is a remaining expectation which was not matched: ExpectedExec => expecting Exec or ExecContext which:
-	//   - matches sql: '^INSERT (.+)'
-	//   - is without arguments
-	//   - should return Result having:
-	//       LastInsertId: 0
-	//       RowsAffected: 0
-}
-
 func TestShouldReturnValidSqlDriverResult(t *testing.T) {
 	result := NewResult(1, 2)
 	id, err := result.LastInsertId()

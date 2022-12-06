@@ -154,7 +154,7 @@ func ExampleRows_expectToBeClosed() {
 		fmt.Println("got error:", err)
 	}
 
-	// Output: got error: expected query rows to be closed, but it was not: ExpectedQuery => expecting Query, QueryContext or QueryRow which:
+	// Output: got error: expected query rows to be closed, but it was not: ExpectedSql => expecting Query, QueryContext or QueryRow which:
 	//   - matches sql: 'SELECT'
 	//   - is without arguments
 	//   - should return rows:

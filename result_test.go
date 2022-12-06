@@ -11,7 +11,7 @@ var mock = &sqlmock{}
 func ExampleNewErrorResult() {
 	db, mock, _ := New()
 	result := NewErrorResult(fmt.Errorf("some error"))
-	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+	mock.ExpectSql(nil, "^INSERT (.+)").WillReturnResult(result)
 	res, _ := db.Exec("INSERT something")
 	_, err := res.LastInsertId()
 	fmt.Println(err)
@@ -21,7 +21,7 @@ func ExampleNewErrorResult() {
 func ExampleNewResult() {
 	var lastInsertID, affected int64
 	result := NewResult(lastInsertID, affected)
-	mock.ExpectExec("^INSERT (.+)").WillReturnResult(result)
+	mock.ExpectSql(nil, "^INSERT (.+)").WillReturnResult(result)
 	fmt.Println(mock.ExpectationsWereMet())
 	// Output: there is a remaining expectation which was not matched: ExpectedExec => expecting Exec or ExecContext which:
 	//   - matches sql: '^INSERT (.+)'

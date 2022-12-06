@@ -120,47 +120,69 @@ func (e *ExpectedRollback) String() string {
 	return msg
 }
 
-// ExpectedQuery is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
+// ExpectedSql is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
 // *sql.Tx.QueryRow, *sql.Stmt.Query or *sql.Stmt.QueryRow expectations.
 // Returned by *Sqlmock.ExpectQuery.
-type ExpectedQuery struct {
+type ExpectedSql struct {
 	queryBasedExpectation
 	rows             driver.Rows
 	delay            time.Duration
 	rowsMustBeClosed bool
 	rowsWereClosed   bool
+	result           driver.Result
+	expectedOpt      Matcher
+}
+
+// WithArgsCheck match sql args
+func (e *ExpectedSql) WithArgsCheck(checkArgs func(args []driver.Value) error) *ExpectedSql {
+	e.checkArgs = checkArgs
+	return e
 }
 
 // WithArgs will match given expected args to actual database query arguments.
 // if at least one argument does not match, it will return an error. For specific
-// arguments an sqlmock.Argument interface can be used to match an argument.
-func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
+// arguments an sqlmock.Matcher interface can be used to match an argument.
+func (e *ExpectedSql) WithArgs(args ...driver.Value) *ExpectedSql {
 	e.args = args
 	return e
 }
 
 // RowsWillBeClosed expects this query rows to be closed.
-func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
+func (e *ExpectedSql) RowsWillBeClosed() *ExpectedSql {
 	e.rowsMustBeClosed = true
 	return e
 }
 
 // WillReturnError allows to set an error for expected database query
-func (e *ExpectedQuery) WillReturnError(err error) *ExpectedQuery {
+func (e *ExpectedSql) WillReturnError(err error) *ExpectedSql {
 	e.err = err
 	return e
 }
 
 // WillDelayFor allows to specify duration for which it will delay
 // result. May be used together with Context
-func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
+func (e *ExpectedSql) WillDelayFor(duration time.Duration) *ExpectedSql {
 	e.delay = duration
 	return e
 }
 
+func (e *ExpectedSql) WillReturnResult(result driver.Result) *ExpectedSql {
+	e.result = result
+	return e
+}
+
+func (e *ExpectedSql) WillReturnRows(rows ...*Rows) *ExpectedSql {
+	sets := make([]*Rows, len(rows))
+	for i, r := range rows {
+		sets[i] = r
+	}
+	e.rows = &rowSets{sets: sets, ex: e}
+	return e
+}
+
 // String returns string representation
-func (e *ExpectedQuery) String() string {
-	msg := "ExpectedQuery => expecting Query, QueryContext or QueryRow which:"
+func (e *ExpectedSql) String() string {
+	msg := "ExpectedSql => expecting Query, QueryContext or QueryRow which:"
 	msg += "\n  - matches sql: '" + e.expectSQL + "'"
 
 	if len(e.args) == 0 {
@@ -184,80 +206,8 @@ func (e *ExpectedQuery) String() string {
 	return msg
 }
 
-// ExpectedExec is used to manage *sql.DB.Exec, *sql.Tx.Exec or *sql.Stmt.Exec expectations.
-// Returned by *Sqlmock.ExpectExec.
-type ExpectedExec struct {
-	queryBasedExpectation
-	result driver.Result
-	delay  time.Duration
-}
-
-// WithArgs will match given expected args to actual database exec operation arguments.
-// if at least one argument does not match, it will return an error. For specific
-// arguments an sqlmock.Argument interface can be used to match an argument.
-func (e *ExpectedExec) WithArgs(args ...driver.Value) *ExpectedExec {
-	e.args = args
-	return e
-}
-
-// WillReturnError allows to set an error for expected database exec action
-func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
-	e.err = err
-	return e
-}
-
-// WillDelayFor allows to specify duration for which it will delay
-// result. May be used together with Context
-func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
-	e.delay = duration
-	return e
-}
-
-// String returns string representation
-func (e *ExpectedExec) String() string {
-	msg := "ExpectedExec => expecting Exec or ExecContext which:"
-	msg += "\n  - matches sql: '" + e.expectSQL + "'"
-
-	if len(e.args) == 0 {
-		msg += "\n  - is without arguments"
-	} else {
-		msg += "\n  - is with arguments:\n"
-		var margs []string
-		for i, arg := range e.args {
-			margs = append(margs, fmt.Sprintf("    %d - %+v", i, arg))
-		}
-		msg += strings.Join(margs, "\n")
-	}
-
-	if e.result != nil {
-		if res, ok := e.result.(*result); ok {
-			msg += "\n  - should return Result having:"
-			msg += fmt.Sprintf("\n      LastInsertId: %d", res.insertID)
-			msg += fmt.Sprintf("\n      RowsAffected: %d", res.rowsAffected)
-			if res.err != nil {
-				msg += fmt.Sprintf("\n      Error: %s", res.err)
-			}
-		}
-	}
-
-	if e.err != nil {
-		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
-	}
-
-	return msg
-}
-
-// WillReturnResult arranges for an expected Exec() to return a particular
-// result, there is sqlmock.NewResult(lastInsertID int64, affectedRows int64) method
-// to build a corresponding result. Or if actions needs to be tested against errors
-// sqlmock.NewErrorResult(err error) to return a given error.
-func (e *ExpectedExec) WillReturnResult(result driver.Result) *ExpectedExec {
-	e.result = result
-	return e
-}
-
 // ExpectedPrepare is used to manage *sql.DB.Prepare or *sql.Tx.Prepare expectations.
-// Returned by *Sqlmock.ExpectPrepare.
+// Returned by *Sqlmock.WithPrepare.
 type ExpectedPrepare struct {
 	commonExpectation
 	mock         *sqlmock
@@ -295,26 +245,6 @@ func (e *ExpectedPrepare) WillBeClosed() *ExpectedPrepare {
 	return e
 }
 
-// ExpectQuery allows to expect Query() or QueryRow() on this prepared statement.
-// This method is convenient in order to prevent duplicating sql query string matching.
-func (e *ExpectedPrepare) ExpectQuery() *ExpectedQuery {
-	eq := &ExpectedQuery{}
-	eq.expectSQL = e.expectSQL
-	eq.converter = e.mock.converter
-	e.mock.expected = append(e.mock.expected, eq)
-	return eq
-}
-
-// ExpectExec allows to expect Exec() on this prepared statement.
-// This method is convenient in order to prevent duplicating sql query string matching.
-func (e *ExpectedPrepare) ExpectExec() *ExpectedExec {
-	eq := &ExpectedExec{}
-	eq.expectSQL = e.expectSQL
-	eq.converter = e.mock.converter
-	e.mock.expected = append(e.mock.expected, eq)
-	return eq
-}
-
 // String returns string representation
 func (e *ExpectedPrepare) String() string {
 	msg := "ExpectedPrepare => expecting Prepare statement which:"
@@ -338,6 +268,7 @@ type queryBasedExpectation struct {
 	expectSQL string
 	converter driver.ValueConverter
 	args      []driver.Value
+	checkArgs func(args []driver.Value) error
 }
 
 // ExpectedPing is used to manage *sql.DB.Ping expectations.
@@ -371,7 +302,7 @@ func (e *ExpectedPing) String() string {
 
 type ExpectedOperation struct {
 	commonExpectation
-	arg Argument
+	arg Matcher
 }
 
 // WillReturnError allows to set an error for *sql.DB.Begin action

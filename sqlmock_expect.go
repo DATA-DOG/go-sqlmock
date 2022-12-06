@@ -27,13 +27,15 @@ func (c *sqlmock) ExpectPing() *ExpectedPing {
 	return e
 }
 
-func (c *sqlmock) ExpectOperation(arg Argument) *ExpectedOperation {
-	var match = AnyArg()
-	if arg != nil {
-		match = arg
+func (c *sqlmock) ExpectSql(expectedOpt Matcher, expectedSQL string) *ExpectedSql {
+	var match = Any()
+	if expectedOpt != nil {
+		match = expectedOpt
 	}
 
-	e := &ExpectedOperation{arg: match}
+	e := &ExpectedSql{expectedOpt: match}
+	e.expectSQL = expectedSQL
+	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
 }
@@ -43,15 +45,18 @@ func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error)
 	if err != nil {
 		return db, c, err
 	}
+
 	for _, option := range options {
 		err := option(c)
 		if err != nil {
 			return db, c, err
 		}
 	}
+
 	if c.converter == nil {
 		c.converter = driver.DefaultParameterConverter
 	}
+
 	if c.queryMatcher == nil {
 		c.queryMatcher = QueryMatcherRegexp
 	}
@@ -95,7 +100,7 @@ func (c *sqlmock) ExpectationsWereMet() error {
 		}
 
 		// must check whether all expected queried rows are closed
-		if query, ok := e.(*ExpectedQuery); ok {
+		if query, ok := e.(*ExpectedSql); ok {
 			if query.rowsMustBeClosed && !query.rowsWereClosed {
 				return fmt.Errorf("expected query rows to be closed, but it was not: %s", query)
 			}
@@ -110,24 +115,8 @@ func (c *sqlmock) ExpectBegin() *ExpectedBegin {
 	return e
 }
 
-func (c *sqlmock) ExpectExec(expectedSQL string) *ExpectedExec {
-	e := &ExpectedExec{}
-	e.expectSQL = expectedSQL
-	e.converter = c.converter
-	c.expected = append(c.expected, e)
-	return e
-}
-
 func (c *sqlmock) ExpectPrepare(expectedSQL string) *ExpectedPrepare {
 	e := &ExpectedPrepare{expectSQL: expectedSQL, mock: c}
-	c.expected = append(c.expected, e)
-	return e
-}
-
-func (c *sqlmock) ExpectQuery(expectedSQL string) *ExpectedQuery {
-	e := &ExpectedQuery{}
-	e.expectSQL = expectedSQL
-	e.converter = c.converter
 	c.expected = append(c.expected, e)
 	return e
 }

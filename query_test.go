@@ -18,7 +18,7 @@ func ExampleQueryMatcher() {
 		AddRow(1, "one").
 		AddRow(2, "two")
 
-	mock.ExpectQuery("SELECT * FROM users").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT * FROM users").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT * FROM users")
 	if err != nil {

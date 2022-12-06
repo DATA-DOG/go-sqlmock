@@ -1,3 +1,4 @@
+//go:build go1.8
 // +build go1.8
 
 package sqlmock
@@ -6,42 +7,20 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"log"
 	"reflect"
 )
 
-// WillReturnRows specifies the set of resulting rows that will be returned
-// by the triggered query
-func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
-	defs := 0
-	sets := make([]*Rows, len(rows))
-	for i, r := range rows {
-		sets[i] = r
-		if r.def != nil {
-			defs++
-		}
-	}
-	if defs > 0 && defs == len(sets) {
-		e.rows = &rowSetsWithDefinition{&rowSets{sets: sets, ex: e}}
-	} else {
-		e.rows = &rowSets{sets: sets, ex: e}
-	}
-	return e
-}
-
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
-	if nil == e.args {
-		if len(args) > 0 {
-			return fmt.Errorf("expected 0, but got %d arguments", len(args))
-		}
-		return nil
-	}
 	if len(args) != len(e.args) {
+		log.Printf("arguments not match\n expected => %s\n actual   => %s \n", jsonify(e.args), jsonify(convValue(args)))
 		return fmt.Errorf("expected %d, but got %d arguments", len(e.args), len(args))
 	}
+
 	// @TODO should we assert either all args are named or ordinal?
 	for k, v := range args {
 		// custom argument matcher
-		matcher, ok := e.args[k].(Argument)
+		matcher, ok := e.args[k].(Matcher)
 		if ok {
 			if !matcher.Match(v.Value) {
 				return fmt.Errorf("matcher %T could not match %d argument %T - %+v", matcher, k, args[k], args[k])

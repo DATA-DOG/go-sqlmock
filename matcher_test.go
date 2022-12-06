@@ -8,13 +8,13 @@ import (
 
 type AnyTime struct{}
 
-// Match satisfies sqlmock.Argument interface
+// Match satisfies sqlmock.Matcher interface
 func (a AnyTime) Match(v driver.Value) bool {
 	_, ok := v.(time.Time)
 	return ok
 }
 
-func TestAnyTimeArgument(t *testing.T) {
+func TestAnyTimeMatcher(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestAnyTimeArgument(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectExec("INSERT INTO users").
+	mock.ExpectSql(nil, "INSERT INTO users").
 		WithArgs("john", AnyTime{}).
 		WillReturnResult(NewResult(1, 1))
 
@@ -36,7 +36,7 @@ func TestAnyTimeArgument(t *testing.T) {
 	}
 }
 
-func TestByteSliceArgument(t *testing.T) {
+func TestByteSliceMatcher(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
 	if err != nil {
@@ -45,7 +45,7 @@ func TestByteSliceArgument(t *testing.T) {
 	defer db.Close()
 
 	username := []byte("user")
-	mock.ExpectExec("INSERT INTO users").WithArgs(username).WillReturnResult(NewResult(1, 1))
+	mock.ExpectSql(nil, "INSERT INTO users").WithArgs(username).WillReturnResult(NewResult(1, 1))
 
 	_, err = db.Exec("INSERT INTO users(username) VALUES (?)", username)
 	if err != nil {

@@ -1,3 +1,4 @@
+//go:build go1.9
 // +build go1.9
 
 package sqlmock
@@ -17,10 +18,10 @@ func TestStatementTX(t *testing.T) {
 	}
 	defer db.Close()
 
-	prep := mock.ExpectPrepare("SELECT")
+	mock.ExpectPrepare("SELECT")
 	mock.ExpectBegin()
 
-	prep.ExpectQuery().WithArgs(1).WillReturnError(errors.New("fast fail"))
+	mock.ExpectSql(nil, "SELECT").WithArgs(1).WillReturnError(errors.New("fast fail"))
 
 	stmt, err := db.Prepare("SELECT title, body FROM articles WHERE id = ?")
 	if err != nil {
@@ -60,7 +61,8 @@ func Test_sqlmock_CheckNamedValue(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for i := range tests {
+		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mock.(*sqlmock).CheckNamedValue(tt.arg); (err != nil) != tt.wantErr {
 				t.Errorf("CheckNamedValue() error = %v, wantErr %v", err, tt.wantErr)

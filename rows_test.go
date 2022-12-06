@@ -21,7 +21,7 @@ func ExampleRows() {
 		AddRow(1, "one").
 		AddRow(2, "two")
 
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()
@@ -51,7 +51,7 @@ func ExampleRows_rowError() {
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("row error"))
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()
@@ -78,7 +78,7 @@ func ExampleRows_closeError() {
 	defer db.Close()
 
 	rows := NewRows([]string{"id", "title"}).CloseError(fmt.Errorf("close error"))
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 
@@ -103,7 +103,7 @@ func ExampleRows_rawBytes() {
 		AddRow(1, []byte(`one binary value with some text!`)).
 		AddRow(2, []byte(`two binary value with even more text than the first one`))
 
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()
@@ -146,7 +146,7 @@ func ExampleRows_expectToBeClosed() {
 	defer db.Close()
 
 	rows := NewRows([]string{"id", "title"}).AddRow(1, "john")
-	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows).RowsWillBeClosed()
 
 	db.Query("SELECT")
 
@@ -173,7 +173,7 @@ func ExampleRows_customDriverValue() {
 		AddRow(5, sql.NullInt64{Int64: 5, Valid: true}).
 		AddRow(2, sql.NullInt64{})
 
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()
@@ -205,7 +205,7 @@ func TestAllowsToSetRowsErrors(t *testing.T) {
 		AddRow(0, "one").
 		AddRow(1, "two").
 		RowError(1, fmt.Errorf("error"))
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -241,7 +241,7 @@ func TestRowsCloseError(t *testing.T) {
 	defer db.Close()
 
 	rows := NewRows([]string{"id"}).CloseError(fmt.Errorf("close error"))
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -266,7 +266,7 @@ func TestRowsClosed(t *testing.T) {
 	defer db.Close()
 
 	rows := NewRows([]string{"id"}).AddRow(1)
-	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows).RowsWillBeClosed()
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -293,14 +293,14 @@ func TestQuerySingleRow(t *testing.T) {
 	rows := NewRows([]string{"id"}).
 		AddRow(1).
 		AddRow(2)
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	var id int
 	if err := db.QueryRow("SELECT").Scan(&id); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	mock.ExpectQuery("SELECT").WillReturnRows(NewRows([]string{"id"}))
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(NewRows([]string{"id"}))
 	if err := db.QueryRow("SELECT").Scan(&id); err != sql.ErrNoRows {
 		t.Fatal("expected sql no rows error")
 	}
@@ -403,7 +403,7 @@ func TestRowsScanError(t *testing.T) {
 	defer db.Close()
 
 	r := NewRows([]string{"col1", "col2"}).AddRow("one", "two").AddRow("one", nil)
-	mock.ExpectQuery("SELECT").WillReturnRows(r)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(r)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -430,37 +430,6 @@ func TestRowsScanError(t *testing.T) {
 	}
 }
 
-func TestCSVRowParser(t *testing.T) {
-	t.Parallel()
-	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
-	db, mock, err := New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-
-	mock.ExpectQuery("SELECT").WillReturnRows(rs)
-
-	rw, err := db.Query("SELECT")
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	defer rw.Close()
-	var col1 string
-	var col2 []byte
-
-	rw.Next()
-	if err = rw.Scan(&col1, &col2); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	if col1 != "a" {
-		t.Fatalf("expected col1 to be 'a', but got [%T]:%+v", col1, col1)
-	}
-	if col2 != nil {
-		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
-	}
-}
-
 func TestWrongNumberOfValues(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()
@@ -472,7 +441,7 @@ func TestWrongNumberOfValues(t *testing.T) {
 	defer func() {
 		recover()
 	}()
-	mock.ExpectQuery("SELECT ID FROM TABLE").WithArgs(101).WillReturnRows(NewRows([]string{"ID"}).AddRow(101, "Hello"))
+	mock.ExpectSql(nil, "SELECT ID FROM TABLE").WithArgs(101).WillReturnRows(NewRows([]string{"ID"}).AddRow(101, "Hello"))
 	db.Query("SELECT ID FROM TABLE", 101)
 	// shouldn't reach here
 	t.Error("expected panic from query")
@@ -507,7 +476,7 @@ func queryRowBytesInvalidatedByNext(t *testing.T, rows *Rows, scan func(*sql.Row
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -553,7 +522,7 @@ func queryRowBytesNotInvalidatedByNext(t *testing.T, rows *Rows, scan func(*sql.
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -602,7 +571,7 @@ func queryRowBytesInvalidatedByClose(t *testing.T, rows *Rows, scan func(*sql.Ro
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -640,7 +609,7 @@ func queryRowBytesNotInvalidatedByClose(t *testing.T, rows *Rows, scan func(*sql
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, err := db.Query("SELECT")
 	if err != nil {
@@ -696,7 +665,7 @@ func TestAddRows(t *testing.T) {
 	}
 
 	rows := NewRows([]string{"id", "name"}).AddRows(values...)
-	mock.ExpectQuery("SELECT").WillReturnRows(rows).RowsWillBeClosed()
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows).RowsWillBeClosed()
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()
@@ -735,7 +704,7 @@ func ExampleRows_AddRows() {
 
 	rows := NewRows([]string{"id", "title"}).AddRows(values...)
 
-	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	mock.ExpectSql(nil, "SELECT").WillReturnRows(rows)
 
 	rs, _ := db.Query("SELECT")
 	defer rs.Close()

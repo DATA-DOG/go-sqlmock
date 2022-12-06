@@ -1,5 +1,9 @@
 package sqlmock
 
+import "database/sql/driver"
+
+var _ driver.Stmt = (*statement)(nil)
+
 type statement struct {
 	conn  *sqlmock
 	ex    *ExpectedPrepare

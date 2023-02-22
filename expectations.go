@@ -368,3 +368,82 @@ func (e *ExpectedPing) String() string {
 	}
 	return msg
 }
+
+// ExpectedSelectCtx is used to manage *sql.DB.SelectContext, *sql.Tx.SelectContext or *sql.Stmt.SelectContext expectations.
+// Returned by *Sqlmock.ExpectExec.
+type ExpectedSelectCtx struct {
+	queryBasedExpectation
+	result driver.Result
+	delay  time.Duration
+	dst    Value
+}
+
+type Value interface {
+	UpgradeVal()
+}
+
+// WithArgs will match given expected args to actual database exec operation arguments.
+// if at least one argument does not match, it will return an error. For specific
+// arguments an sqlmock.Argument interface can be used to match an argument.
+func (e *ExpectedSelectCtx) WithArgs(dst Value, args ...driver.Value) *ExpectedSelectCtx {
+	e.args = args
+	e.dst = dst
+	return e
+}
+
+// WillReturnError allows to set an error for expected database exec action
+func (e *ExpectedSelectCtx) WillReturnError(err error) *ExpectedSelectCtx {
+	e.err = err
+	return e
+}
+
+// WillDelayFor allows to specify duration for which it will delay
+// result. May be used together with Context
+func (e *ExpectedSelectCtx) WillDelayFor(duration time.Duration) *ExpectedSelectCtx {
+	e.delay = duration
+	return e
+}
+
+// String returns string representation
+func (e *ExpectedSelectCtx) String() string {
+	msg := "ExpectedSelectCtx => expecting Select or ExecSelect which:"
+	msg += "\n  - matches sql: '" + e.expectSQL + "'"
+
+	if len(e.args) == 0 {
+		msg += "\n  - is without arguments"
+	} else {
+		msg += "\n  - is with arguments:\n"
+		var margs []string
+		for i, arg := range e.args {
+			margs = append(margs, fmt.Sprintf("    %d - %+v", i, arg))
+		}
+		msg += strings.Join(margs, "\n")
+	}
+
+	e.dst.UpgradeVal()
+
+	if e.result != nil {
+		res, _ := e.result.(*result)
+		msg += "\n  - should return Result having:"
+		msg += fmt.Sprintf("\n      LastInsertId: %d", res.insertID)
+		msg += fmt.Sprintf("\n      RowsAffected: %d", res.rowsAffected)
+		if res.err != nil {
+			msg += fmt.Sprintf("\n      Error: %s", res.err)
+		}
+	}
+
+	if e.err != nil {
+		msg += fmt.Sprintf("\n  - should return error: %s", e.err)
+	}
+
+	return msg
+}
+
+// WillReturnResult arranges for an expected Exec() to return a particular
+// result, there is sqlmock.NewResult(lastInsertID int64, affectedRows int64) method
+// to build a corresponding result. Or if actions needs to be tested against errors
+// sqlmock.NewErrorResult(err error) to return a given error.
+func (e *ExpectedSelectCtx) WillReturnResult(result driver.Result) *ExpectedSelectCtx {
+	e.result = result
+	return e
+}

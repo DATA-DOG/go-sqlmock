@@ -84,6 +84,8 @@ type SqlmockCommon interface {
 	// sql driver.Value slice or from the CSV string and
 	// to be used as sql driver.Rows.
 	NewRows(columns []string) *Rows
+
+	ExpectedSelect() *ExpectedSelectCtx
 }
 
 type sqlmock struct {
@@ -436,4 +438,10 @@ func (c *sqlmock) NewRows(columns []string) *Rows {
 	r := NewRows(columns)
 	r.converter = c.converter
 	return r
+}
+
+func (c *sqlmock) ExpectedSelect() *ExpectedSelectCtx {
+	e := &ExpectedSelectCtx{}
+	c.expected = append(c.expected, e)
+	return e
 }

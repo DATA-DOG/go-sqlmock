@@ -85,7 +85,7 @@ type SqlmockCommon interface {
 	// to be used as sql driver.Rows.
 	NewRows(columns []string) *Rows
 
-	ExpectedSelect() *ExpectedSelectCtx
+	ExpectSelect(expectedSQL string) *ExpectedSelectCtx
 }
 
 type sqlmock struct {
@@ -440,8 +440,9 @@ func (c *sqlmock) NewRows(columns []string) *Rows {
 	return r
 }
 
-func (c *sqlmock) ExpectedSelect() *ExpectedSelectCtx {
+func (c *sqlmock) ExpectSelect(expectedSQL string) *ExpectedSelectCtx {
 	e := &ExpectedSelectCtx{}
+	e.expectSQL = expectedSQL
 	c.expected = append(c.expected, e)
 	return e
 }

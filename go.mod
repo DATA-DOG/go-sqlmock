@@ -1,4 +1,4 @@
-module github.com/dantedenis/go-sqlmock.git
+module github.com/dantedenis/go-sqlmock
 
 go 1.15
 

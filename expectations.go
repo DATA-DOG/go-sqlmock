@@ -1,6 +1,7 @@
 package sqlmock
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"strings"
@@ -375,19 +376,17 @@ type ExpectedSelectCtx struct {
 	queryBasedExpectation
 	result driver.Result
 	delay  time.Duration
-	dst    Value
-}
-
-type Value interface {
-	UpgradeVal()
+	dst    Argument
+	ctx    context.Context
 }
 
 // WithArgs will match given expected args to actual database exec operation arguments.
 // if at least one argument does not match, it will return an error. For specific
 // arguments an sqlmock.Argument interface can be used to match an argument.
-func (e *ExpectedSelectCtx) WithArgs(dst Value, args ...driver.Value) *ExpectedSelectCtx {
+func (e *ExpectedSelectCtx) WithArgs(ctx context.Context, dst Argument, args ...driver.Value) *ExpectedSelectCtx {
 	e.args = args
 	e.dst = dst
+	e.ctx = ctx
 	return e
 }
 
@@ -419,8 +418,6 @@ func (e *ExpectedSelectCtx) String() string {
 		}
 		msg += strings.Join(margs, "\n")
 	}
-
-	e.dst.UpgradeVal()
 
 	if e.result != nil {
 		res, _ := e.result.(*result)

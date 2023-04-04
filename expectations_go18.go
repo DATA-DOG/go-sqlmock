@@ -16,7 +16,7 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 	sets := make([]*Rows, len(rows))
 	for i, r := range rows {
 		sets[i] = r
-		if r.def != nil {
+		if r != nil && r.def != nil {
 			defs++
 		}
 	}

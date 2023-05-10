@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -208,8 +209,11 @@ func (r *Rows) FromCSVString(s string) *Rows {
 
 	for {
 		res, err := csvReader.Read()
-		if err != nil || res == nil {
-			break
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			panic(fmt.Sprintf("Parsing CSV string failed: %s", err.Error()))
 		}
 
 		row := make([]driver.Value, len(r.cols))

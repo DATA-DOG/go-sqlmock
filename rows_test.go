@@ -461,6 +461,15 @@ func TestCSVRowParser(t *testing.T) {
 	}
 }
 
+func TestCSVParserInvalidInput(t *testing.T) {
+	defer func() {
+		recover()
+	}()
+	_ = NewRows([]string{"col1", "col2"}).FromCSVString("a,\"NULL\"\"")
+	// shouldn't reach here
+	t.Error("expected panic from parsing invalid CSV")
+}
+
 func TestWrongNumberOfValues(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()

@@ -432,7 +432,7 @@ func TestRowsScanError(t *testing.T) {
 
 func TestCSVRowParser(t *testing.T) {
 	t.Parallel()
-	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
+	rs := NewRows([]string{"col1", "col2", "col3"}).FromCSVString("a,NULL,NULL")
 	db, mock, err := New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -448,9 +448,10 @@ func TestCSVRowParser(t *testing.T) {
 	defer rw.Close()
 	var col1 string
 	var col2 []byte
+	var col3 *string
 
 	rw.Next()
-	if err = rw.Scan(&col1, &col2); err != nil {
+	if err = rw.Scan(&col1, &col2, &col3); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	if col1 != "a" {
@@ -458,6 +459,9 @@ func TestCSVRowParser(t *testing.T) {
 	}
 	if col2 != nil {
 		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
+	}
+	if col3 != nil {
+		t.Fatalf("expected col3 to be nil, but got [%T]:%+v", col2, col2)
 	}
 }
 

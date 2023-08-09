@@ -15,7 +15,7 @@ const invalidate = "☠☠☠ MEMORY OVERWRITTEN ☠☠☠ "
 // CSVColumnParser is a function which converts trimmed csv
 // column string to a []byte representation. Currently
 // transforms NULL to nil
-var CSVColumnParser = func(s string) []byte {
+var CSVColumnParser = func(s string) interface{} {
 	switch {
 	case strings.ToLower(s) == "null":
 		return nil

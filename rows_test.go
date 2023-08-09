@@ -461,7 +461,7 @@ func TestCSVRowParser(t *testing.T) {
 		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
 	}
 	if col3 != nil {
-		t.Fatalf("expected col3 to be nil, but got [%T]:%+v", col2, col2)
+		t.Fatalf("expected col3 to be nil, but got [%T]:%+v", col3, col3)
 	}
 }
 

@@ -84,16 +84,6 @@ type SqlmockCommon interface {
 	// sql driver.Value slice or from the CSV string and
 	// to be used as sql driver.Rows.
 	NewRows(columns []string) *Rows
-
-	// ExpectPreparedQueryOnce gives an option to control addition
-	// and match of queries passed via prepared statements in expectations.
-	// By default this is set to false.
-	//
-	// If you use goroutines to parallelize your query execution using
-	// prepared stmts, this option helps to avoid building multiple expectations
-	// for same query. Otherwise when set to true, already matched prepared or
-	// executed query may lead to generation of unexpected query matches.
-	ExpectPreparedQueryOnce(bool)
 }
 
 type sqlmock struct {
@@ -105,8 +95,7 @@ type sqlmock struct {
 	queryMatcher QueryMatcher
 	monitorPings bool
 
-	expected            []expectation
-	expectedPrepareOnce bool
+	expected []expectation
 }
 
 func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
@@ -146,10 +135,6 @@ func (c *sqlmock) ExpectClose() *ExpectedClose {
 
 func (c *sqlmock) MatchExpectationsInOrder(b bool) {
 	c.ordered = b
-}
-
-func (c *sqlmock) ExpectPreparedQueryOnce(b bool) {
-	c.expectedPrepareOnce = b
 }
 
 // Close a mock database driver connection. It may or may not
@@ -312,13 +297,11 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 			next.Unlock()
 			fulfilled++
 
-			if c.expectedPrepareOnce {
-				if pr, ok := next.(*ExpectedPrepare); ok {
-					if err := c.queryMatcher.Match(pr.expectSQL, query); err == nil {
-						expected = pr
-						next.Lock()
-						break
-					}
+			if pr, ok := next.(*ExpectedPrepare); ok {
+				if err := c.queryMatcher.Match(pr.expectSQL, query); err == nil {
+					expected = pr
+					next.Lock()
+					break
 				}
 			}
 			continue
@@ -359,12 +342,10 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 }
 
 func (c *sqlmock) ExpectPrepare(expectedSQL string) *ExpectedPrepare {
-	if c.expectedPrepareOnce {
-		for _, e := range c.expected {
-			if ep, ok := e.(*ExpectedPrepare); ok {
-				if ep.expectSQL == expectedSQL {
-					return ep
-				}
+	for _, e := range c.expected {
+		if ep, ok := e.(*ExpectedPrepare); ok {
+			if ep.expectSQL == expectedSQL {
+				return ep
 			}
 		}
 	}

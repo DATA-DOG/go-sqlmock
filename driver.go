@@ -45,7 +45,7 @@ func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 	dsn := fmt.Sprintf("sqlmock_db_%d", pool.counter)
 	pool.counter++
 
-	smock := &sqlmock{dsn: dsn, drv: pool, ordered: true}
+	smock := &sqlmock{dsn: dsn, drv: pool, ordered: true, expectedPrepareOnce: false}
 	pool.conns[dsn] = smock
 	pool.Unlock()
 

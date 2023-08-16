@@ -672,6 +672,7 @@ func TestGoroutineExecutionWithUnorderedExpectationMatching(t *testing.T) {
 		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
+
 	// note this line is important for unordered expectation matching
 	mock.MatchExpectationsInOrder(false)
 

@@ -166,7 +166,7 @@ func (r *Rows) RowError(row int, err error) *Rows {
 // of columns
 func (r *Rows) AddRow(values ...driver.Value) *Rows {
 	if len(values) != len(r.cols) {
-		panic("Expected number of values to match number of columns")
+		panic(fmt.Sprintf("Expected number of values to match number of columns: expected %d, actual %d", len(values), len(r.cols)))
 	}
 
 	row := make([]driver.Value, len(r.cols))

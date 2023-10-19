@@ -730,6 +730,31 @@ func TestAddRows(t *testing.T) {
 	// scanned id: 4 and title: Emily
 }
 
+func TestAddRowExpectPanic(t *testing.T) {
+	t.Parallel()
+
+	const expectedPanic = "Expected number of values to match number of columns: expected 1, actual 2"
+	values := []driver.Value{
+		"John",
+		"Jane",
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if r != expectedPanic {
+				t.Fatalf("panic message did not match expected: expected '%s', actual '%s'", r, expectedPanic)
+			}
+
+			return
+		}
+		t.Fatalf("expected panic: %s", expectedPanic)
+	}()
+
+	rows := NewRows([]string{"id", "name"})
+	// Note missing spread "..."
+	rows.AddRow(values)
+}
+
 func ExampleRows_AddRows() {
 	db, mock, err := New()
 	if err != nil {

@@ -39,6 +39,9 @@ func (c *sqlmock) QueryContext(ctx context.Context, query string, args []driver.
 			}
 			return ex.rows, nil
 		case <-ctx.Done():
+			if ex.completeOnCancel {
+				return ex.rows, nil
+			}
 			return nil, ErrCancelled
 		}
 	}
@@ -57,6 +60,9 @@ func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.N
 			}
 			return ex.result, nil
 		case <-ctx.Done():
+			if ex.completeOnCancel {
+				return ex.result, nil
+			}
 			return nil, ErrCancelled
 		}
 	}
@@ -75,6 +81,9 @@ func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx
 			}
 			return c, nil
 		case <-ctx.Done():
+			if ex.completeOnCancel {
+				return c, nil
+			}
 			return nil, ErrCancelled
 		}
 	}
@@ -93,6 +102,9 @@ func (c *sqlmock) PrepareContext(ctx context.Context, query string) (driver.Stmt
 			}
 			return &statement{c, ex, query}, nil
 		case <-ctx.Done():
+			if ex.completeOnCancel {
+				return &statement{c, ex, query}, nil
+			}
 			return nil, ErrCancelled
 		}
 	}

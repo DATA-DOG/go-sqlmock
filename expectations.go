@@ -53,7 +53,17 @@ func (e *ExpectedClose) String() string {
 // returned by *Sqlmock.ExpectBegin.
 type ExpectedBegin struct {
 	commonExpectation
-	delay time.Duration
+	completeOnCancel bool
+	delay            time.Duration
+}
+
+// WillCompleteOnCancel prevents context cancellation from cancelling the query and returning ErrCancelled.
+// Some databases may not guarantee that a query will be cancelled even if a cancellation signal is sent to the
+// database. In these cases there is an edge case where the context is cancelled but the query completes without error.
+// WillCompleteOnCancel facilitates testing this edge case.
+func (e *ExpectedBegin) WillCompleteOnCancel() *ExpectedBegin {
+	e.completeOnCancel = true
+	return e
 }
 
 // WillReturnError allows to set an error for *sql.DB.Begin action
@@ -129,6 +139,7 @@ type ExpectedQuery struct {
 	delay            time.Duration
 	rowsMustBeClosed bool
 	rowsWereClosed   bool
+	completeOnCancel bool
 }
 
 // WithArgs will match given expected args to actual database query arguments.
@@ -142,6 +153,15 @@ func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
 // RowsWillBeClosed expects this query rows to be closed.
 func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
 	e.rowsMustBeClosed = true
+	return e
+}
+
+// WillCompleteOnCancel prevents context cancellation from cancelling the query and returning ErrCancelled.
+// Some databases may not guarantee that a query will be cancelled even if a cancellation signal is sent to the
+// database. In these cases there is an edge case where the context is cancelled but the query completes without error.
+// WillCompleteOnCancel facilitates testing this edge case.
+func (e *ExpectedQuery) WillCompleteOnCancel() *ExpectedQuery {
+	e.completeOnCancel = true
 	return e
 }
 
@@ -188,8 +208,9 @@ func (e *ExpectedQuery) String() string {
 // Returned by *Sqlmock.ExpectExec.
 type ExpectedExec struct {
 	queryBasedExpectation
-	result driver.Result
-	delay  time.Duration
+	result           driver.Result
+	delay            time.Duration
+	completeOnCancel bool
 }
 
 // WithArgs will match given expected args to actual database exec operation arguments.
@@ -197,6 +218,15 @@ type ExpectedExec struct {
 // arguments an sqlmock.Argument interface can be used to match an argument.
 func (e *ExpectedExec) WithArgs(args ...driver.Value) *ExpectedExec {
 	e.args = args
+	return e
+}
+
+// WillCompleteOnCancel prevents context cancellation from cancelling the query and returning ErrCancelled.
+// Some databases may not guarantee that a query will be cancelled even if a cancellation signal is sent to the
+// database. In these cases there is an edge case where the context is cancelled but the query completes without error.
+// WillCompleteOnCancel facilitates testing this edge case.
+func (e *ExpectedExec) WillCompleteOnCancel() *ExpectedExec {
+	e.completeOnCancel = true
 	return e
 }
 
@@ -260,13 +290,23 @@ func (e *ExpectedExec) WillReturnResult(result driver.Result) *ExpectedExec {
 // Returned by *Sqlmock.ExpectPrepare.
 type ExpectedPrepare struct {
 	commonExpectation
-	mock         *sqlmock
-	expectSQL    string
-	statement    driver.Stmt
-	closeErr     error
-	mustBeClosed bool
-	wasClosed    bool
-	delay        time.Duration
+	mock             *sqlmock
+	expectSQL        string
+	statement        driver.Stmt
+	closeErr         error
+	mustBeClosed     bool
+	wasClosed        bool
+	completeOnCancel bool
+	delay            time.Duration
+}
+
+// WillCompleteOnCancel prevents context cancellation from cancelling the query and returning ErrCancelled.
+// Some databases may not guarantee that a query will be cancelled even if a cancellation signal is sent to the
+// database. In these cases there is an edge case where the context is cancelled but the query completes without error.
+// WillCompleteOnCancel facilitates testing this edge case.
+func (e *ExpectedPrepare) WillCompleteOnCancel() *ExpectedPrepare {
+	e.completeOnCancel = true
+	return e
 }
 
 // WillReturnError allows to set an error for the expected *sql.DB.Prepare or *sql.Tx.Prepare action.

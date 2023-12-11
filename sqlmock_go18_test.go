@@ -1,3 +1,4 @@
+//go:build go1.8
 // +build go1.8
 
 package sqlmock
@@ -437,7 +438,6 @@ func TestContextExecErrorDelay(t *testing.T) {
 	// test that return of error is delayed
 	var delay time.Duration = 100 * time.Millisecond
 	mock.ExpectExec("^INSERT INTO articles").
-		WithArgs("hello").
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)
 

@@ -101,3 +101,25 @@ func TestCustomValueConverterQueryScan(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestQueryWithNoArgsAndWithArgsPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Error("Expected panic for using WithArgs and ExpectNoArgs together")
+	}()
+	mock := &sqlmock{}
+	mock.ExpectQuery("SELECT (.+) FROM user").WithArgs("John").WithoutArgs()
+}
+
+func TestExecWithNoArgsAndWithArgsPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Error("Expected panic for using WithArgs and ExpectNoArgs together")
+	}()
+	mock := &sqlmock{}
+	mock.ExpectExec("^INSERT INTO user").WithArgs("John").WithoutArgs()
+}

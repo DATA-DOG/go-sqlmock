@@ -134,8 +134,24 @@ type ExpectedQuery struct {
 // WithArgs will match given expected args to actual database query arguments.
 // if at least one argument does not match, it will return an error. For specific
 // arguments an sqlmock.Argument interface can be used to match an argument.
+// Must not be used together with WithoutArgs()
 func (e *ExpectedQuery) WithArgs(args ...driver.Value) *ExpectedQuery {
+	if e.noArgs {
+		panic("WithArgs() and WithoutArgs() must not be used together")
+	}
 	e.args = args
+	return e
+}
+
+// WithoutArgs will ensure that no arguments are passed for this query.
+// if at least one argument is passed, it will return an error. This allows
+// for stricter validation of the query arguments.
+// Must no be used together with WithArgs()
+func (e *ExpectedQuery) WithoutArgs() *ExpectedQuery {
+	if len(e.args) > 0 {
+		panic("WithoutArgs() and WithArgs() must not be used together")
+	}
+	e.noArgs = true
 	return e
 }
 
@@ -195,8 +211,24 @@ type ExpectedExec struct {
 // WithArgs will match given expected args to actual database exec operation arguments.
 // if at least one argument does not match, it will return an error. For specific
 // arguments an sqlmock.Argument interface can be used to match an argument.
+// Must not be used together with WithoutArgs()
 func (e *ExpectedExec) WithArgs(args ...driver.Value) *ExpectedExec {
+	if len(e.args) > 0 {
+		panic("WithArgs() and WithoutArgs() must not be used together")
+	}
 	e.args = args
+	return e
+}
+
+// WithoutArgs will ensure that no args are passed for this expected database exec action.
+// if at least one argument is passed, it will return an error. This allows for stricter
+// validation of the query arguments.
+// Must not be used together with WithArgs()
+func (e *ExpectedExec) WithoutArgs() *ExpectedExec {
+	if len(e.args) > 0 {
+		panic("WithoutArgs() and WithArgs() must not be used together")
+	}
+	e.noArgs = true
 	return e
 }
 
@@ -338,6 +370,7 @@ type queryBasedExpectation struct {
 	expectSQL string
 	converter driver.ValueConverter
 	args      []driver.Value
+	noArgs    bool // ensure no args are passed
 }
 
 // ExpectedPing is used to manage *sql.DB.Ping expectations.

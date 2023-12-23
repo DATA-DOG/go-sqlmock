@@ -1,5 +1,4 @@
 // +build go1.8
-
 package sqlmock
 
 import (
@@ -242,7 +241,7 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	}
 
 	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("Query '%s', arguments do not match: %s", query, err)
+		return nil, fmt.Errorf("Query " + errMsgFmt, query, err)
 	}
 
 	expected.triggered = true
@@ -277,6 +276,10 @@ func (c *sqlmock) Exec(query string, args []driver.Value) (driver.Result, error)
 
 	return ex.result, nil
 }
+
+const (
+	errMsgFmt = "'%s', \n\narguments do not match: \n	%s"
+)
 
 func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, error) {
 	var expected *ExpectedExec
@@ -324,7 +327,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	}
 
 	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("ExecQuery '%s', arguments do not match: %s", query, err)
+		return nil, fmt.Errorf("ExecQuery: " + errMsgFmt, query, err)
 	}
 
 	expected.triggered = true
@@ -333,7 +336,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	}
 
 	if expected.result == nil {
-		return nil, fmt.Errorf("ExecQuery '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %T as %+v", query, args, expected, expected)
+		return nil, fmt.Errorf("\nExecQuery '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
 
 	return expected, nil

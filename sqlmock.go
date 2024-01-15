@@ -98,7 +98,7 @@ type sqlmock struct {
 	expected []expectation
 }
 
-func (c *sqlmock) open(options []func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
+func (c *sqlmock) open(options []SqlMockOption) (*sql.DB, Sqlmock, error) {
 	db, err := sql.Open("sqlmock", c.dsn)
 	if err != nil {
 		return db, c, err

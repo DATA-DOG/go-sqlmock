@@ -24,10 +24,12 @@ var CSVColumnParser = func(s string) interface{} {
 }
 
 type rowSets struct {
-	sets []*Rows
-	pos  int
-	ex   *ExpectedQuery
-	raw  [][]byte
+	sets             []*Rows
+	pos              int
+	ex               *ExpectedQuery
+	raw              [][]byte
+	rowsMustBeClosed bool
+	rowsWereClosed   bool
 }
 
 func (rs *rowSets) Columns() []string {
@@ -36,7 +38,7 @@ func (rs *rowSets) Columns() []string {
 
 func (rs *rowSets) Close() error {
 	rs.invalidateRaw()
-	rs.ex.rowsWereClosed = true
+	rs.rowsWereClosed = true
 	return rs.sets[rs.pos].closeErr
 }
 
@@ -59,6 +61,18 @@ func (rs *rowSets) Next(dest []driver.Value) error {
 	}
 
 	return r.nextErr[r.pos-1]
+}
+
+func (rs *rowSets) WillBeClosed(closed bool) {
+	rs.rowsMustBeClosed = closed
+}
+
+func (rs *rowSets) AreClosed() bool {
+	return rs.rowsWereClosed
+}
+
+func (rs *rowSets) MustBeClosed() bool {
+	return rs.rowsMustBeClosed
 }
 
 // transforms to debuggable printable string

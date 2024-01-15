@@ -20,12 +20,12 @@ type expectation interface {
 // satisfies the expectation interface
 type commonExpectation struct {
 	sync.Mutex
-	triggered bool
-	err       error
+	times int
+	err   error
 }
 
 func (e *commonExpectation) fulfilled() bool {
-	return e.triggered
+	return e.times == -1
 }
 
 // ExpectedClose is used to manage *sql.DB.Close expectation
@@ -120,15 +120,24 @@ func (e *ExpectedRollback) String() string {
 	return msg
 }
 
+type mockRows interface {
+	driver.Rows
+
+	WillBeClosed(closed bool)
+
+	AreClosed() bool
+
+	MustBeClosed() bool
+}
+
 // ExpectedQuery is used to manage *sql.DB.Query, *dql.DB.QueryRow, *sql.Tx.Query,
 // *sql.Tx.QueryRow, *sql.Stmt.Query or *sql.Stmt.QueryRow expectations.
 // Returned by *Sqlmock.ExpectQuery.
 type ExpectedQuery struct {
 	queryBasedExpectation
-	rows             driver.Rows
-	delay            time.Duration
-	rowsMustBeClosed bool
-	rowsWereClosed   bool
+	rows       mockRows
+	mockedRows []*Rows
+	delay      time.Duration
 }
 
 // WithArgs will match given expected args to actual database query arguments.
@@ -157,7 +166,7 @@ func (e *ExpectedQuery) WithoutArgs() *ExpectedQuery {
 
 // RowsWillBeClosed expects this query rows to be closed.
 func (e *ExpectedQuery) RowsWillBeClosed() *ExpectedQuery {
-	e.rowsMustBeClosed = true
+	e.rows.WillBeClosed(true)
 	return e
 }
 
@@ -171,6 +180,11 @@ func (e *ExpectedQuery) WillReturnError(err error) *ExpectedQuery {
 // result. May be used together with Context
 func (e *ExpectedQuery) WillDelayFor(duration time.Duration) *ExpectedQuery {
 	e.delay = duration
+	return e
+}
+
+func (e *ExpectedQuery) Times(times int) *ExpectedQuery {
+	e.times = times - 1
 	return e
 }
 
@@ -242,6 +256,11 @@ func (e *ExpectedExec) WillReturnError(err error) *ExpectedExec {
 // result. May be used together with Context
 func (e *ExpectedExec) WillDelayFor(duration time.Duration) *ExpectedExec {
 	e.delay = duration
+	return e
+}
+
+func (e *ExpectedExec) Times(times int) *ExpectedExec {
+	e.times = times - 1
 	return e
 }
 

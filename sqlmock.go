@@ -179,7 +179,7 @@ func (c *sqlmock) Close() error {
 		return fmt.Errorf(msg)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	expected.Unlock()
 	return expected.err
 }
@@ -202,8 +202,8 @@ func (c *sqlmock) ExpectationsWereMet() error {
 		}
 
 		// must check whether all expected queried rows are closed
-		if query, ok := e.(*ExpectedQuery); ok {
-			if query.rowsMustBeClosed && !query.rowsWereClosed {
+		if query, ok := e.(*ExpectedQuery); ok && query.rows != nil {
+			if query.rows.MustBeClosed() && !query.rows.AreClosed() {
 				return fmt.Errorf("expected query rows to be closed, but it was not: %s", query)
 			}
 		}
@@ -253,7 +253,7 @@ func (c *sqlmock) begin() (*ExpectedBegin, error) {
 		return nil, fmt.Errorf(msg)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	expected.Unlock()
 
 	return expected, expected.err
@@ -329,7 +329,7 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 		return nil, fmt.Errorf("Prepare: %v", err)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	return expected, expected.err
 }
 
@@ -389,7 +389,7 @@ func (c *sqlmock) Commit() error {
 		return fmt.Errorf(msg)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	expected.Unlock()
 	return expected.err
 }
@@ -424,7 +424,7 @@ func (c *sqlmock) Rollback() error {
 		return fmt.Errorf(msg)
 	}
 
-	expected.triggered = true
+	expected.times -= 1
 	expected.Unlock()
 	return expected.err
 }

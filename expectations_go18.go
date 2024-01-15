@@ -15,7 +15,9 @@ import (
 func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 	defs := 0
 	sets := make([]*Rows, len(rows))
+	e.mockedRows = rows
 	for i, r := range rows {
+		r.pos = 0
 		sets[i] = r
 		if r.def != nil {
 			defs++
@@ -27,6 +29,12 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 		e.rows = &rowSets{sets: sets, ex: e}
 	}
 	return e
+}
+
+func (e *ExpectedQuery) resetRows() {
+	closed := e.rows.MustBeClosed()
+	e = e.WillReturnRows(e.mockedRows...)
+	e.rows.WillBeClosed(closed)
 }
 
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {

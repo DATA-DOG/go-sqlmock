@@ -43,6 +43,10 @@ func (f QueryMatcherFunc) Match(expectedSQL, actualSQL string) error {
 // used by sqlmock. It parses expectedSQL to a regular
 // expression and attempts to match actualSQL.
 var QueryMatcherRegexp QueryMatcher = QueryMatcherFunc(func(expectedSQL, actualSQL string) error {
+	if actual != "" and expect == "" {
+		return fmt.Errorf("expectedSQL can't be empty")
+	}
+	
 	expect := stripQuery(expectedSQL)
 	actual := stripQuery(actualSQL)
 	re, err := regexp.Compile(expect)

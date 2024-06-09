@@ -2,9 +2,12 @@ package sqlmock
 
 import "database/sql/driver"
 
+// SqlMockOption is the type defining an option used to configure an SqlMock at creation
+type SqlMockOption func(*sqlmock) error
+
 // ValueConverterOption allows to create a sqlmock connection
 // with a custom ValueConverter to support drivers with special data types.
-func ValueConverterOption(converter driver.ValueConverter) func(*sqlmock) error {
+func ValueConverterOption(converter driver.ValueConverter) SqlMockOption {
 	return func(s *sqlmock) error {
 		s.converter = converter
 		return nil
@@ -14,7 +17,7 @@ func ValueConverterOption(converter driver.ValueConverter) func(*sqlmock) error 
 // QueryMatcherOption allows to customize SQL query matcher
 // and match SQL query strings in more sophisticated ways.
 // The default QueryMatcher is QueryMatcherRegexp.
-func QueryMatcherOption(queryMatcher QueryMatcher) func(*sqlmock) error {
+func QueryMatcherOption(queryMatcher QueryMatcher) SqlMockOption {
 	return func(s *sqlmock) error {
 		s.queryMatcher = queryMatcher
 		return nil
@@ -30,7 +33,7 @@ func QueryMatcherOption(queryMatcher QueryMatcher) func(*sqlmock) error {
 // If false is passed or this option is omitted, calls to Ping will not be
 // considered when determining expectations and calls to ExpectPing will have
 // no effect.
-func MonitorPingsOption(monitorPings bool) func(*sqlmock) error {
+func MonitorPingsOption(monitorPings bool) SqlMockOption {
 	return func(s *sqlmock) error {
 		s.monitorPings = monitorPings
 		return nil

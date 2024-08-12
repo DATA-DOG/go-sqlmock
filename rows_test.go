@@ -432,7 +432,7 @@ func TestRowsScanError(t *testing.T) {
 
 func TestCSVRowParser(t *testing.T) {
 	t.Parallel()
-	rs := NewRows([]string{"col1", "col2"}).FromCSVString("a,NULL")
+	rs := NewRows([]string{"col1", "col2", "col3"}).FromCSVString("a,NULL,NULL")
 	db, mock, err := New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -448,9 +448,10 @@ func TestCSVRowParser(t *testing.T) {
 	defer rw.Close()
 	var col1 string
 	var col2 []byte
+	var col3 *string
 
 	rw.Next()
-	if err = rw.Scan(&col1, &col2); err != nil {
+	if err = rw.Scan(&col1, &col2, &col3); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 	if col1 != "a" {
@@ -459,6 +460,18 @@ func TestCSVRowParser(t *testing.T) {
 	if col2 != nil {
 		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
 	}
+	if col3 != nil {
+		t.Fatalf("expected col3 to be nil, but got [%T]:%+v", col3, col3)
+	}
+}
+
+func TestCSVParserInvalidInput(t *testing.T) {
+	defer func() {
+		recover()
+	}()
+	_ = NewRows([]string{"col1", "col2"}).FromCSVString("a,\"NULL\"\"")
+	// shouldn't reach here
+	t.Error("expected panic from parsing invalid CSV")
 }
 
 func TestWrongNumberOfValues(t *testing.T) {
@@ -715,6 +728,31 @@ func TestAddRows(t *testing.T) {
 	// scanned id: 2 and title: Jane
 	// scanned id: 3 and title: Peter
 	// scanned id: 4 and title: Emily
+}
+
+func TestAddRowExpectPanic(t *testing.T) {
+	t.Parallel()
+
+	const expectedPanic = "Expected number of values to match number of columns: expected 1, actual 2"
+	values := []driver.Value{
+		"John",
+		"Jane",
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if r != expectedPanic {
+				t.Fatalf("panic message did not match expected: expected '%s', actual '%s'", r, expectedPanic)
+			}
+
+			return
+		}
+		t.Fatalf("expected panic: %s", expectedPanic)
+	}()
+
+	rows := NewRows([]string{"id", "name"})
+	// Note missing spread "..."
+	rows.AddRow(values)
 }
 
 func ExampleRows_AddRows() {

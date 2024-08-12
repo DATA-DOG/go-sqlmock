@@ -1,3 +1,4 @@
+//go:build !go1.8
 // +build !go1.8
 
 package sqlmock
@@ -17,7 +18,7 @@ func (e *ExpectedQuery) WillReturnRows(rows *Rows) *ExpectedQuery {
 
 func (e *queryBasedExpectation) argsMatches(args []namedValue) error {
 	if nil == e.args {
-		if len(args) > 0 {
+		if e.noArgs && len(args) > 0 {
 			return fmt.Errorf("expected 0, but got %d arguments", len(args))
 		}
 		return nil

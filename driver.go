@@ -40,7 +40,7 @@ func (d *mockDriver) Open(dsn string) (driver.Conn, error) {
 // a specific driver.
 // Pings db so that all expectations could be
 // asserted.
-func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
+func New(options ...SqlMockOption) (*sql.DB, Sqlmock, error) {
 	pool.Lock()
 	dsn := fmt.Sprintf("sqlmock_db_%d", pool.counter)
 	pool.counter++
@@ -67,7 +67,7 @@ func New(options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
 //
 // It is not recommended to use this method, unless you
 // really need it and there is no other way around.
-func NewWithDSN(dsn string, options ...func(*sqlmock) error) (*sql.DB, Sqlmock, error) {
+func NewWithDSN(dsn string, options ...SqlMockOption) (*sql.DB, Sqlmock, error) {
 	pool.Lock()
 	if _, ok := pool.conns[dsn]; ok {
 		pool.Unlock()

@@ -749,6 +749,16 @@ func TestRunExecsWithExpectedErrorMeetsExpectations(t *testing.T) {
 	}
 }
 
+func TestRunExecsWithNoArgsExpectedMeetsExpectations(t *testing.T) {
+	db, dbmock, _ := New()
+	dbmock.ExpectExec("THE FIRST EXEC").WithoutArgs().WillReturnResult(NewResult(0, 0))
+
+	_, err := db.Exec("THE FIRST EXEC", "foobar")
+	if err == nil {
+		t.Fatalf("expected error, but there wasn't any")
+	}
+}
+
 func TestRunQueryWithExpectedErrorMeetsExpectations(t *testing.T) {
 	db, dbmock, _ := New()
 	dbmock.ExpectQuery("THE FIRST QUERY").WillReturnError(fmt.Errorf("big bad bug"))
@@ -959,7 +969,7 @@ func TestPrepareExec(t *testing.T) {
 	mock.ExpectBegin()
 	ep := mock.ExpectPrepare("INSERT INTO ORDERS\\(ID, STATUS\\) VALUES \\(\\?, \\?\\)")
 	for i := 0; i < 3; i++ {
-		ep.ExpectExec().WithArgs(i, "Hello"+strconv.Itoa(i)).WillReturnResult(NewResult(1, 1))
+		ep.ExpectExec().WillReturnResult(NewResult(1, 1))
 	}
 	mock.ExpectCommit()
 	tx, _ := db.Begin()
@@ -1073,7 +1083,7 @@ func TestPreparedStatementCloseExpectation(t *testing.T) {
 	defer db.Close()
 
 	ep := mock.ExpectPrepare("INSERT INTO ORDERS").WillBeClosed()
-	ep.ExpectExec().WithArgs(1, "Hello").WillReturnResult(NewResult(1, 1))
+	ep.ExpectExec().WillReturnResult(NewResult(1, 1))
 
 	stmt, err := db.Prepare("INSERT INTO ORDERS(ID, STATUS) VALUES (?, ?)")
 	if err != nil {
@@ -1104,7 +1114,6 @@ func TestExecExpectationErrorDelay(t *testing.T) {
 	// test that return of error is delayed
 	var delay time.Duration = 100 * time.Millisecond
 	mock.ExpectExec("^INSERT INTO articles").
-		WithArgs("hello").
 		WillReturnError(errors.New("slow fail")).
 		WillDelayFor(delay)
 
@@ -1230,10 +1239,10 @@ func Test_sqlmock_Prepare_and_Exec(t *testing.T) {
 
 	mock.ExpectPrepare("SELECT (.+) FROM users WHERE (.+)")
 	expected := NewResult(1, 1)
-	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").
+	mock.ExpectExec("SELECT (.+) FROM users WHERE (.+)").
 		WillReturnResult(expected)
 	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WillReturnRows(expectedRows)
 
 	got, err := mock.(*sqlmock).Prepare(query)
 	if err != nil {
@@ -1326,7 +1335,7 @@ func Test_sqlmock_Query(t *testing.T) {
 	}
 	defer db.Close()
 	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(expectedRows)
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WillReturnRows(expectedRows)
 	query := "SELECT name, email FROM users WHERE name = ?"
 	rows, err := mock.(*sqlmock).Query(query, []driver.Value{"test"})
 	if err != nil {
@@ -1335,6 +1344,22 @@ func Test_sqlmock_Query(t *testing.T) {
 	}
 	defer rows.Close()
 	_, err = mock.(*sqlmock).Query(query, []driver.Value{failArgument{}})
+	if err == nil {
+		t.Errorf("error expected")
+		return
+	}
+}
+
+func Test_sqlmock_QueryExpectWithoutArgs(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	expectedRows := mock.NewRows([]string{"id", "name", "email"}).AddRow(1, "test", "test@example.com")
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WillReturnRows(expectedRows).WithoutArgs()
+	query := "SELECT name, email FROM users WHERE name = ?"
+	_, err = mock.(*sqlmock).Query(query, []driver.Value{"test"})
 	if err == nil {
 		t.Errorf("error expected")
 		return

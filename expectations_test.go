@@ -102,6 +102,29 @@ func TestCustomValueConverterQueryScan(t *testing.T) {
 	}
 }
 
+func TestQueryWithNoArgsAndWithArgsPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Error("Expected panic for using WithArgs and ExpectNoArgs together")
+	}()
+	mock := &sqlmock{}
+	mock.ExpectQuery("SELECT (.+) FROM user").WithArgs("John").WithoutArgs()
+}
+
+func TestExecWithNoArgsAndWithArgsPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Error("Expected panic for using WithArgs and ExpectNoArgs together")
+	}()
+	mock := &sqlmock{}
+	mock.ExpectExec("^INSERT INTO user").WithArgs("John").WithoutArgs()
+}
+
+
 func TestQueryWillReturnsNil(t *testing.T) {
 	t.Parallel()
 
@@ -122,5 +145,4 @@ func TestQueryWillReturnsNil(t *testing.T) {
 	_, err = mock.(*sqlmock).Query(query, []driver.Value{"test"})
 	if err != nil {
 		t.Error(err)
-	}
 }

@@ -1,3 +1,4 @@
+//go:build go1.8
 // +build go1.8
 
 package sqlmock
@@ -10,10 +11,15 @@ import (
 )
 
 func TestQueryExpectationArgComparison(t *testing.T) {
-	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
+	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter, noArgs: true}
 	against := []driver.NamedValue{{Value: int64(5), Ordinal: 1}}
 	if err := e.argsMatches(against); err == nil {
-		t.Error("arguments should not match, since no expectation was set, but argument was passed")
+		t.Error("arguments should not match, since argument was passed, but noArgs was set")
+	}
+
+	e.noArgs = false
+	if err := e.argsMatches(against); err != nil {
+		t.Error("arguments should match, since argument was passed, but no expected args or noArgs was set")
 	}
 
 	e.args = []driver.Value{5, "str"}
@@ -102,10 +108,15 @@ func TestQueryExpectationArgComparisonBool(t *testing.T) {
 }
 
 func TestQueryExpectationNamedArgComparison(t *testing.T) {
-	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter}
+	e := &queryBasedExpectation{converter: driver.DefaultParameterConverter, noArgs: true}
 	against := []driver.NamedValue{{Value: int64(5), Name: "id"}}
 	if err := e.argsMatches(against); err == nil {
-		t.Errorf("arguments should not match, since no expectation was set, but argument was passed")
+		t.Error("arguments should not match, since argument was passed, but noArgs was set")
+	}
+
+	e.noArgs = false
+	if err := e.argsMatches(against); err != nil {
+		t.Error("arguments should match, since argument was passed, but no expected args or noArgs was set")
 	}
 
 	e.args = []driver.Value{

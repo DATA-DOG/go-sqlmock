@@ -145,4 +145,5 @@ func TestQueryWillReturnsNil(t *testing.T) {
 	_, err = mock.(*sqlmock).Query(query, []driver.Value{"test"})
 	if err != nil {
 		t.Error(err)
+	}
 }

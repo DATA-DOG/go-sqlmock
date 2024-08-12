@@ -101,3 +101,26 @@ func TestCustomValueConverterQueryScan(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestQueryWillReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() {
+		if err := recover(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE (.+)").WithArgs("test").WillReturnRows(nil)
+	query := "SELECT name, email FROM users WHERE name = ?"
+	_, err = mock.(*sqlmock).Query(query, []driver.Value{"test"})
+	if err != nil {
+		t.Error(err)
+	}
+}

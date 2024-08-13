@@ -1,3 +1,4 @@
+//go:build go1.8
 // +build go1.8
 
 package sqlmock
@@ -66,7 +67,7 @@ func (c *sqlmock) ExecContext(ctx context.Context, query string, args []driver.N
 
 // Implement the "ConnBeginTx" interface
 func (c *sqlmock) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
-	ex, err := c.begin()
+	ex, err := c.begin(opts)
 	if ex != nil {
 		select {
 		case <-time.After(ex.delay):

@@ -1,6 +1,7 @@
 package sqlmock
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"strings"
@@ -53,7 +54,8 @@ func (e *ExpectedClose) String() string {
 // returned by *Sqlmock.ExpectBegin.
 type ExpectedBegin struct {
 	commonExpectation
-	delay time.Duration
+	delay  time.Duration
+	txOpts *driver.TxOptions
 }
 
 // WillReturnError allows to set an error for *sql.DB.Begin action
@@ -65,6 +67,9 @@ func (e *ExpectedBegin) WillReturnError(err error) *ExpectedBegin {
 // String returns string representation
 func (e *ExpectedBegin) String() string {
 	msg := "ExpectedBegin => expecting database transaction Begin"
+	if e.txOpts != nil {
+		msg += fmt.Sprintf(", with tx options: %+v", e.txOpts)
+	}
 	if e.err != nil {
 		msg += fmt.Sprintf(", which should return error: %s", e.err)
 	}
@@ -75,6 +80,15 @@ func (e *ExpectedBegin) String() string {
 // result. May be used together with Context
 func (e *ExpectedBegin) WillDelayFor(duration time.Duration) *ExpectedBegin {
 	e.delay = duration
+	return e
+}
+
+// WithTxOptions allows to set transaction options for *sql.DB.Begin action
+func (e *ExpectedBegin) WithTxOptions(opts sql.TxOptions) *ExpectedBegin {
+	e.txOpts = &driver.TxOptions{
+		Isolation: driver.IsolationLevel(opts.Isolation),
+		ReadOnly:  opts.ReadOnly,
+	}
 	return e
 }
 

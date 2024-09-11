@@ -30,6 +30,7 @@ func (e *ExpectedQuery) WillReturnRows(rows ...*Rows) *ExpectedQuery {
 }
 
 func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
+	errMsgFmt := "\nwant\n	%d\n	got\n		%d\n	arguments"
 	if nil == e.args {
 		if e.noArgs && len(args) > 0 {
 			return fmt.Errorf("expected 0, but got %d arguments", len(args))
@@ -37,7 +38,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 		return nil
 	}
 	if len(args) != len(e.args) {
-		return fmt.Errorf("expected %d, but got %d arguments", len(e.args), len(args))
+		return fmt.Errorf(errMsgFmt, len(e.args), len(args))
 	}
 	// @TODO should we assert either all args are named or ordinal?
 	for k, v := range args {
@@ -54,7 +55,7 @@ func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 		if named, isNamed := dval.(sql.NamedArg); isNamed {
 			dval = named.Value
 			if v.Name != named.Name {
-				return fmt.Errorf("named argument %d: name: \"%s\" does not match expected: \"%s\"", k, v.Name, named.Name)
+				return fmt.Errorf("named argument %d: name: '%s' does not match expected: '%s'", k, v.Name, named.Name)
 			}
 		} else if k+1 != v.Ordinal {
 			return fmt.Errorf("argument %d: ordinal position: %d does not match expected: %d", k, k+1, v.Ordinal)
@@ -67,11 +68,27 @@ func (e *queryBasedExpectation) argsMatches(args []driver.NamedValue) error {
 		}
 
 		if !reflect.DeepEqual(darg, v.Value) {
-			return fmt.Errorf("argument %d expected [%T - %+v] does not match actual [%T - %+v]", k, darg, darg, v.Value, v.Value)
+			
+			return fmt.Errorf("Summary:\nargument %d \nwant: \n	type  '%T' \n	value '%+v' \ngot: \n	type  '%T' \n	value '%+v'",
+				k,
+				darg,
+				darg,
+				v.Value,
+				v.Value)
 		}
 	}
 	return nil
 }
+
+func errorFormat(argIndex int, expectedType interface{}, expectedValue interface{}, actualType interface{}, actualValue interface{}) error {
+    return fmt.Errorf("Argument %d \nExpected: \n\tType:  '%T' \n\tValue: '%+v' \nReceived: \n\tType:  '%T' \n\tValue: '%+v'",
+        argIndex,
+        expectedType,
+        expectedType,
+        actualType,
+        actualType)
+}
+
 
 func (e *queryBasedExpectation) attemptArgMatch(args []driver.NamedValue) (err error) {
 	// catch panic

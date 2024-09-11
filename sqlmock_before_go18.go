@@ -94,7 +94,7 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	}
 
 	if err := expected.argsMatches(args); err != nil {
-		return nil, fmt.Errorf("Query '%s', arguments do not match: %s", query, err)
+		return nil, fmt.Errorf("Query " + ErrMsgFmt, query, err)
 	}
 
 	expected.triggered = true

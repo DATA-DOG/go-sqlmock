@@ -213,7 +213,7 @@ func (c *sqlmock) ExpectationsWereMet() error {
 
 // Begin meets http://golang.org/pkg/database/sql/driver/#Conn interface
 func (c *sqlmock) Begin() (driver.Tx, error) {
-	ex, err := c.begin()
+	ex, err := c.begin(driver.TxOptions{})
 	if ex != nil {
 		time.Sleep(ex.delay)
 	}
@@ -224,7 +224,7 @@ func (c *sqlmock) Begin() (driver.Tx, error) {
 	return c, nil
 }
 
-func (c *sqlmock) begin() (*ExpectedBegin, error) {
+func (c *sqlmock) begin(opts driver.TxOptions) (*ExpectedBegin, error) {
 	var expected *ExpectedBegin
 	var ok bool
 	var fulfilled int
@@ -252,9 +252,14 @@ func (c *sqlmock) begin() (*ExpectedBegin, error) {
 		}
 		return nil, fmt.Errorf(msg)
 	}
+	defer expected.Unlock()
+	if expected.txOpts != nil &&
+		expected.txOpts.Isolation != opts.Isolation &&
+		expected.txOpts.ReadOnly != opts.ReadOnly {
+		return nil, fmt.Errorf("expected transaction options do not match: %+v, got: %+v", expected.txOpts, opts)
+	}
 
 	expected.triggered = true
-	expected.Unlock()
 
 	return expected, expected.err
 }

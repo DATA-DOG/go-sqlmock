@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 )
 
@@ -126,6 +127,103 @@ type Rows struct {
 	pos       int
 	nextErr   map[int]error
 	closeErr  error
+}
+
+// new Rows and add a set of driver.Value by using the struct reflect tag
+func newRowsFromStruct(m interface{}, tagName ...string) (*Rows, error) {
+	val := reflect.ValueOf(m).Elem()
+	num := val.NumField()
+	if num == 0 {
+		return nil, errors.New("no properties available")
+	}
+	columns := make([]string, 0, num)
+	var values []driver.Value
+	tag := "json"
+	if len(tagName) > 0 {
+		tag = tagName[0]
+	}
+	for i := 0; i < num; i++ {
+		f := val.Type().Field(i)
+		column := f.Tag.Get(tag)
+		if len(column) > 0 {
+			columns = append(columns, column)
+			values = append(values, val.Field(i).Interface())
+		}
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("tag not match")
+	}
+	rows := &Rows{
+		cols:      columns,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
+	}
+	return rows.AddRow(values...), nil
+}
+
+// NewRowsFromInterface new Rows from struct or slice or array reflect with tagName
+// NOTE: arr/slice must be of the same type
+// tagName default "json"
+func NewRowsFromInterface(m interface{}, tagName string) (*Rows, error) {
+	kind := reflect.TypeOf(m).Elem().Kind()
+	if kind == reflect.Ptr {
+		kind = reflect.TypeOf(m).Kind()
+	}
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		return newRowsFromSliceOrArray(m, tagName)
+	case reflect.Struct:
+		return newRowsFromStruct(m, tagName)
+	default:
+		return nil, errors.New("the type m must in struct or slice or array")
+	}
+}
+
+// new Rows and add multiple sets of driver.Value by using the tags of the element in reflect type slice/array
+func newRowsFromSliceOrArray(m interface{}, tagName string) (*Rows, error) {
+	vals := reflect.ValueOf(m)
+	if vals.Len() == 0 {
+		return nil, errors.New("the len of m is zero")
+	}
+	typ := reflect.TypeOf(vals.Index(0).Interface()).Elem()
+	if typ.Kind() != reflect.Struct {
+		return nil, errors.New("param type must be struct")
+	}
+	if typ.NumField() == 0 {
+		return nil, errors.New("no properties available")
+	}
+	var idx []int
+	tag := "json"
+	if len(tagName) > 0 {
+		tag = tagName
+	}
+	columns := make([]string, 0, typ.NumField())
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		column := f.Tag.Get(tag)
+		if len(column) > 0 {
+			columns = append(columns, column)
+			idx = append(idx, i)
+		}
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("tag not match")
+	}
+	rows := &Rows{
+		cols:      columns,
+		nextErr:   make(map[int]error),
+		converter: driver.DefaultParameterConverter,
+	}
+	for i := 0; i < vals.Len(); i++ {
+		val := vals.Index(i).Elem()
+		values := make([]driver.Value, 0, len(idx))
+		for _, i := range idx {
+			// NOTE: field by name ptr nil
+			values = append(values, val.Field(i).Interface())
+		}
+		rows.AddRow(values...)
+	}
+	return rows, nil
 }
 
 // NewRows allows Rows to be created from a

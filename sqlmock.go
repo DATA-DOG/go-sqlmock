@@ -254,8 +254,8 @@ func (c *sqlmock) begin(opts driver.TxOptions) (*ExpectedBegin, error) {
 	}
 	defer expected.Unlock()
 	if expected.txOpts != nil &&
-		expected.txOpts.Isolation != opts.Isolation &&
-		expected.txOpts.ReadOnly != opts.ReadOnly {
+		(expected.txOpts.Isolation != opts.Isolation ||
+			expected.txOpts.ReadOnly != opts.ReadOnly) {
 		return nil, fmt.Errorf("expected transaction options do not match: %+v, got: %+v", expected.txOpts, opts)
 	}
 

@@ -380,7 +380,7 @@ func TestContextBeginWithTxOptions(t *testing.T) {
 		cancel()
 	}()
 
-	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: false})
+	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: true})
 	if err != nil {
 		t.Errorf("error was not expected, but got: %v", err)
 	}
@@ -417,6 +417,52 @@ func TestContextBeginWithTxOptionsMismatch(t *testing.T) {
 
 	if err := mock.ExpectationsWereMet(); err == nil {
 		t.Errorf("was expecting an error, as the tx options did not match, but there wasn't one")
+	}
+}
+
+func TestContextBeginWithTxOptionsReadOnlyMismatch(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectBegin().WithTxOptions(sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  true,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Isolation matches, but ReadOnly does not. Should still error.
+	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: false})
+	if err == nil {
+		t.Error("error was expected on ReadOnly mismatch, but there was none")
+	}
+}
+
+func TestContextBeginWithTxOptionsIsolationMismatch(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectBegin().WithTxOptions(sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  true,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// ReadOnly matches, but Isolation does not. Should still error.
+	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable, ReadOnly: true})
+	if err == nil {
+		t.Error("error was expected on Isolation mismatch, but there was none")
 	}
 }
 

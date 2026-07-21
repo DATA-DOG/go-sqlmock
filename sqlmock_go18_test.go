@@ -132,6 +132,172 @@ func TestContextExecWithNamedArg(t *testing.T) {
 	}
 }
 
+func TestContextExecWithNamedOutputArg(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	expectedOut1 := 10
+	expectedOut2 := 20
+	mock.ExpectExec("EXEC ProcWithOutParam").
+		WithArgs(
+			sql.Named("id", 5),
+			NamedOutputArg("out1", expectedOut1),  // out1 is int
+			NamedOutputArg("out2", &expectedOut2), // out2 is *int
+		).
+		WillDelayFor(time.Second).
+		WillReturnResult(NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	actualOut1 := new(int)
+	actualOut2 := new(int)
+	_, err = db.ExecContext(
+		ctx,
+		"EXEC ProcWithOutParam",
+		sql.Named("id", 5),
+		sql.Named("out1", sql.Out{Dest: actualOut1, In: false}),
+		sql.Named("out2", sql.Out{Dest: actualOut2, In: false}),
+	)
+	if err == nil {
+		t.Error("error was expected, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+
+	if expectedOut1 != *actualOut1 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut1, actualOut1)
+	}
+
+	if expectedOut2 != *actualOut2 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut2, actualOut2)
+	}
+
+}
+
+func TestContextExecWithNamedInputOutputArg(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	expectedIn1 := 11
+	expectedOut1 := 12
+	expectedIn2 := 21
+	expectedOut2 := 22
+	mock.ExpectExec("EXEC ProcWithInOutParam").
+		WithArgs(
+			sql.Named("id", 5),
+			NamedInputOutputArg("inout1", &expectedIn1, expectedOut1),  // out1 is int
+			NamedInputOutputArg("inout2", &expectedIn2, &expectedOut2), // out2 is *int
+		).
+		WillDelayFor(time.Second).
+		WillReturnResult(NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	var actualInOut1 *int = &expectedIn1
+	var actualInOut2 *int = &expectedIn2
+	_, err = db.ExecContext(
+		ctx,
+		"EXEC ProcWithInOutParam",
+		sql.Named("id", 5),
+		sql.Named("inout1", sql.Out{Dest: actualInOut1, In: true}),
+		sql.Named("inout2", sql.Out{Dest: actualInOut2, In: true}),
+	)
+	if err == nil {
+		t.Error("error was expected, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+
+	if expectedOut1 != *actualInOut1 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut1, actualInOut1)
+	}
+
+	if expectedOut2 != *actualInOut2 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut2, actualInOut2)
+	}
+}
+
+type MockReturnStatus int32
+type MockOtherOutputType int32
+
+func TestContextExecWithTypedOutputArg(t *testing.T) {
+	t.Parallel()
+
+	rs1 := new(MockReturnStatus)
+	rs2 := new(MockOtherOutputType)
+	converter := NewPassthroughValueConverter(rs1, rs2)
+	db, mock, err := New(ValueConverterOption(converter))
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	expectedOut1 := MockReturnStatus(10)
+	expectedOut2 := MockOtherOutputType(20)
+	mock.ExpectExec("EXEC ProcWithTypedRCParam").
+		WithArgs(
+			sql.Named("id", 5),
+			TypedOutputArg(&expectedOut1),
+			TypedOutputArg(&expectedOut2),
+		).
+		WillDelayFor(time.Second).
+		WillReturnResult(NewResult(1, 1))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	var actualOut1 MockReturnStatus
+	var actualOut2 MockOtherOutputType
+	_, err = db.ExecContext(
+		ctx,
+		"EXEC ProcWithTypedRCParam",
+		sql.Named("id", 5),
+		&actualOut1,
+		&actualOut2,
+	)
+	if err == nil {
+		t.Error("error was expected, but there was none")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+
+	if expectedOut1 != actualOut1 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut1, actualOut1)
+	}
+
+	if expectedOut2 != actualOut2 {
+		t.Errorf("output param value was not expected, was expecting %v, but got %v", expectedOut2, actualOut2)
+	}
+}
+
 func TestContextExec(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()

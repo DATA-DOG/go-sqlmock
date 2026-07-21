@@ -251,6 +251,8 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 		return expected, expected.err // mocked to return error
 	}
 
+	setOutputValues(args, expected.args)
+
 	if expected.rows == nil {
 		return nil, fmt.Errorf("Query '%s' with args %+v, must return a database/sql/driver.Rows, but it was not set for expectation %T as %+v", query, args, expected, expected)
 	}
@@ -332,6 +334,8 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	if expected.err != nil {
 		return expected, expected.err // mocked to return error
 	}
+
+	setOutputValues(args, expected.args)
 
 	if expected.result == nil {
 		return nil, fmt.Errorf("ExecQuery '%s' with args %+v, must return a database/sql/driver.Result, but it was not set for expectation %T as %+v", query, args, expected, expected)

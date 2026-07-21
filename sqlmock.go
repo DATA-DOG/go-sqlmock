@@ -301,11 +301,16 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 		if next.fulfilled() {
 			next.Unlock()
 			fulfilled++
-			continue
+			if _, ok = next.(*ExpectedPrepare); !ok {
+				continue
+			} else {
+				next.Lock()
+			}
 		}
 
 		if c.ordered {
 			if expected, ok = next.(*ExpectedPrepare); ok {
+				fulfilled--
 				break
 			}
 
@@ -316,6 +321,7 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 		if pr, ok := next.(*ExpectedPrepare); ok {
 			if err := c.queryMatcher.Match(pr.expectSQL, query); err == nil {
 				expected = pr
+				fulfilled--
 				break
 			}
 		}
@@ -339,6 +345,13 @@ func (c *sqlmock) prepare(query string) (*ExpectedPrepare, error) {
 }
 
 func (c *sqlmock) ExpectPrepare(expectedSQL string) *ExpectedPrepare {
+	for _, e := range c.expected {
+		if ep, ok := e.(*ExpectedPrepare); ok {
+			if ep.expectSQL == expectedSQL {
+				return ep
+			}
+		}
+	}
 	e := &ExpectedPrepare{expectSQL: expectedSQL, mock: c}
 	c.expected = append(c.expected, e)
 	return e

@@ -7,9 +7,48 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
+
+// When expectations are matched out of order and a query matches by sql but
+// not by arguments, the failure should explain the argument mismatch and
+// include the actual received values, not just report "was not expected".
+func TestUnorderedArgumentMismatchReportsReceivedValues(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.MatchExpectationsInOrder(false)
+
+	mock.ExpectExec("UPDATE users").WithArgs("alice").WillReturnResult(NewResult(1, 1))
+	if _, err := db.Exec("UPDATE users SET name = ?", "bob"); err == nil {
+		t.Error("expected an error for the mismatched exec argument, but got none")
+	} else {
+		if !strings.Contains(err.Error(), "arguments do not match") {
+			t.Errorf("expected the error to explain the argument mismatch, but got: %s", err)
+		}
+		if !strings.Contains(err.Error(), "bob") {
+			t.Errorf("expected the error to include the received argument value 'bob', but got: %s", err)
+		}
+	}
+
+	mock.ExpectQuery("SELECT name FROM users").WithArgs(1).WillReturnRows(NewRows([]string{"name"}).AddRow("alice"))
+	if _, err := db.Query("SELECT name FROM users WHERE id = ?", 2); err == nil {
+		t.Error("expected an error for the mismatched query argument, but got none")
+	} else {
+		if !strings.Contains(err.Error(), "arguments do not match") {
+			t.Errorf("expected the error to explain the argument mismatch, but got: %s", err)
+		}
+		if !strings.Contains(err.Error(), "actual [int64 - 2]") {
+			t.Errorf("expected the error to include the received argument value 2, but got: %s", err)
+		}
+	}
+}
 
 func TestContextExecCancel(t *testing.T) {
 	t.Parallel()

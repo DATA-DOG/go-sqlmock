@@ -200,6 +200,7 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	var expected *ExpectedQuery
 	var fulfilled int
 	var ok bool
+	var argMismatch error
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -223,6 +224,10 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 			if err := qr.attemptArgMatch(args); err == nil {
 				expected = qr
 				break
+			} else {
+				// remember the reason the sql matched but the args did not,
+				// so it can be reported if no other expectation matches
+				argMismatch = err
 			}
 		}
 		next.Unlock()
@@ -233,7 +238,11 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg, query, args)
+		err := fmt.Errorf(msg, query, args)
+		if argMismatch != nil {
+			err = fmt.Errorf("%s, arguments do not match: %s", err, argMismatch)
+		}
+		return nil, err
 	}
 
 	defer expected.Unlock()
@@ -283,6 +292,7 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	var expected *ExpectedExec
 	var fulfilled int
 	var ok bool
+	var argMismatch error
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -307,6 +317,10 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 			if err := exec.attemptArgMatch(args); err == nil {
 				expected = exec
 				break
+			} else {
+				// remember the reason the sql matched but the args did not,
+				// so it can be reported if no other expectation matches
+				argMismatch = err
 			}
 		}
 		next.Unlock()
@@ -316,7 +330,11 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg, query, args)
+		err := fmt.Errorf(msg, query, args)
+		if argMismatch != nil {
+			err = fmt.Errorf("%s, arguments do not match: %s", err, argMismatch)
+		}
+		return nil, err
 	}
 	defer expected.Unlock()
 

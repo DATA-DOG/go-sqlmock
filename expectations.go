@@ -321,7 +321,13 @@ func (e *ExpectedPrepare) WillReturnError(err error) *ExpectedPrepare {
 	return e
 }
 
-// WillReturnCloseError allows to set an error for this prepared statement Close action
+// WillReturnCloseError sets the error returned by the driver's prepared
+// statement Close method.
+//
+// This error is not returned by sql.Stmt.Close for statements prepared with
+// sql.DB.Prepare or sql.DB.PrepareContext, because database/sql discards it.
+// It can be observed when closing statements prepared directly with
+// sql.Tx.Prepare, sql.Tx.PrepareContext, or sql.Conn.PrepareContext.
 func (e *ExpectedPrepare) WillReturnCloseError(err error) *ExpectedPrepare {
 	e.closeErr = err
 	return e

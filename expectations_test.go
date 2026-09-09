@@ -132,7 +132,7 @@ func TestExecWithoutArgsAndWithArgsPanic(t *testing.T) {
 		t.Error("Expected panic for using WithoutArgs and WithArgs together")
 	}()
 	mock := &sqlmock{}
-	mock.ExpectExec("UPDATE invoices SET status = \\? WHERE invoice_id = \\?").WithoutArgs().WithArgs("invoice-ready")
+	mock.ExpectExec("UPDATE invoices SET status = \\?").WithoutArgs().WithArgs("paid")
 }
 
 

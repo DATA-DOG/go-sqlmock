@@ -125,11 +125,11 @@ func TestExecWithNoArgsAndWithArgsPanic(t *testing.T) {
 }
 
 func TestExecWithoutArgsAndWithArgsPanic(t *testing.T) {
+	const expectedPanic = "WithArgs() and WithoutArgs() must not be used together"
 	defer func() {
-		if r := recover(); r != nil {
-			return
+		if r := recover(); r != expectedPanic {
+			t.Fatalf("expected panic %q, got %v", expectedPanic, r)
 		}
-		t.Error("Expected panic for using WithoutArgs and WithArgs together")
 	}()
 	mock := &sqlmock{}
 	mock.ExpectExec("UPDATE invoices SET status = \\?").WithoutArgs().WithArgs("paid")

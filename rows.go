@@ -215,6 +215,9 @@ func (r *Rows) FromCSVString(s string) *Rows {
 			}
 			panic(fmt.Sprintf("Parsing CSV string failed: %s", err.Error()))
 		}
+		if len(res) != len(r.cols) {
+			panic(fmt.Sprintf("Expected number of values to match number of columns: expected %d, actual %d", len(r.cols), len(res)))
+		}
 
 		row := make([]driver.Value, len(r.cols))
 		for i, v := range res {

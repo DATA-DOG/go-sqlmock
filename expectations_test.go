@@ -124,6 +124,17 @@ func TestExecWithNoArgsAndWithArgsPanic(t *testing.T) {
 	mock.ExpectExec("^INSERT INTO user").WithArgs("John").WithoutArgs()
 }
 
+func TestExecWithoutArgsAndWithArgsPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Error("Expected panic for using WithoutArgs and WithArgs together")
+	}()
+	mock := &sqlmock{}
+	mock.ExpectExec("UPDATE invoices SET status = \\? WHERE invoice_id = \\?").WithoutArgs().WithArgs("invoice-ready")
+}
+
 
 func TestQueryWillReturnsNil(t *testing.T) {
 	t.Parallel()

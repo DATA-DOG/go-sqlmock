@@ -227,7 +227,7 @@ type ExpectedExec struct {
 // arguments an sqlmock.Argument interface can be used to match an argument.
 // Must not be used together with WithoutArgs()
 func (e *ExpectedExec) WithArgs(args ...driver.Value) *ExpectedExec {
-	if len(e.args) > 0 {
+	if e.noArgs {
 		panic("WithArgs() and WithoutArgs() must not be used together")
 	}
 	e.args = args

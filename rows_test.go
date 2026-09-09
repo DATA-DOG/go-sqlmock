@@ -474,6 +474,17 @@ func TestCSVParserInvalidInput(t *testing.T) {
 	t.Error("expected panic from parsing invalid CSV")
 }
 
+func TestCSVParserRejectsShortRecord(t *testing.T) {
+	const expectedPanic = "Expected number of values to match number of columns: expected 3, actual 2"
+	defer func() {
+		if r := recover(); r != expectedPanic {
+			t.Fatalf("expected panic %q, got %v", expectedPanic, r)
+		}
+	}()
+
+	NewRows([]string{"order_id", "status", "created_at"}).FromCSVString("INV-2026-0908,paid")
+}
+
 func TestWrongNumberOfValues(t *testing.T) {
 	// Open new mock database
 	db, mock, err := New()

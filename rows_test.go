@@ -475,11 +475,11 @@ func TestCSVParserInvalidInput(t *testing.T) {
 }
 
 func TestCSVParserRejectsShortRecord(t *testing.T) {
+	const expectedPanic = "Expected number of values to match number of columns: expected 3, actual 2"
 	defer func() {
-		if r := recover(); r != nil {
-			return
+		if r := recover(); r != expectedPanic {
+			t.Fatalf("expected panic %q, got %v", expectedPanic, r)
 		}
-		t.Error("expected panic for a CSV record with too few values")
 	}()
 
 	NewRows([]string{"order_id", "status", "created_at"}).FromCSVString("INV-2026-0908,paid")

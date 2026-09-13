@@ -7,9 +7,39 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestUnorderedMatcherErrorsAreReported(t *testing.T) {
+	for name, call := range map[string]func(Sqlmock, *sql.DB) error{
+		"query": func(mock Sqlmock, db *sql.DB) error {
+			mock.ExpectQuery("[")
+			_, err := db.Query("SELECT 1")
+			return err
+		},
+		"exec": func(mock Sqlmock, db *sql.DB) error {
+			mock.ExpectExec("[")
+			_, err := db.Exec("DELETE FROM users")
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			db, mock, err := New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			mock.MatchExpectationsInOrder(false)
+
+			err = call(mock, db)
+			if err == nil || !strings.Contains(err.Error(), "error parsing regexp") {
+				t.Fatalf("expected the matcher error, got: %v", err)
+			}
+		})
+	}
+}
 
 func TestContextExecCancel(t *testing.T) {
 	t.Parallel()

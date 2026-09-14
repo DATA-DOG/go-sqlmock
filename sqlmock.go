@@ -13,6 +13,7 @@ package sqlmock
 import (
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -176,7 +177,7 @@ func (c *sqlmock) Close() error {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	expected.triggered = true
@@ -250,7 +251,7 @@ func (c *sqlmock) begin(opts driver.TxOptions) (*ExpectedBegin, error) {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, errors.New(msg)
 	}
 	defer expected.Unlock()
 	if expected.txOpts != nil &&
@@ -391,7 +392,7 @@ func (c *sqlmock) Commit() error {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	expected.triggered = true
@@ -426,7 +427,7 @@ func (c *sqlmock) Rollback() error {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	expected.triggered = true

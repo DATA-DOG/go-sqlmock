@@ -146,7 +146,7 @@ func (c *sqlmock) ping() (*ExpectedPing, error) {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, errors.New(msg)
 	}
 
 	expected.triggered = true

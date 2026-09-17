@@ -51,6 +51,7 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 	var expected *ExpectedQuery
 	var fulfilled int
 	var ok bool
+	var queryMatchErr error
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -68,6 +69,7 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 		}
 		if qr, ok := next.(*ExpectedQuery); ok {
 			if err := c.queryMatcher.Match(qr.expectSQL, query); err != nil {
+				queryMatchErr = err
 				next.Unlock()
 				continue
 			}
@@ -84,7 +86,11 @@ func (c *sqlmock) query(query string, args []namedValue) (*ExpectedQuery, error)
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg, query, args)
+		err := fmt.Errorf(msg, query, args)
+		if queryMatchErr != nil {
+			return nil, fmt.Errorf("%s, query does not match: %s", err, queryMatchErr)
+		}
+		return nil, err
 	}
 
 	defer expected.Unlock()
@@ -133,6 +139,7 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 	var expected *ExpectedExec
 	var fulfilled int
 	var ok bool
+	var queryMatchErr error
 	for _, next := range c.expected {
 		next.Lock()
 		if next.fulfilled() {
@@ -150,6 +157,7 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 		}
 		if exec, ok := next.(*ExpectedExec); ok {
 			if err := c.queryMatcher.Match(exec.expectSQL, query); err != nil {
+				queryMatchErr = err
 				next.Unlock()
 				continue
 			}
@@ -166,7 +174,11 @@ func (c *sqlmock) exec(query string, args []namedValue) (*ExpectedExec, error) {
 		if fulfilled == len(c.expected) {
 			msg = "all expectations were already fulfilled, " + msg
 		}
-		return nil, fmt.Errorf(msg, query, args)
+		err := fmt.Errorf(msg, query, args)
+		if queryMatchErr != nil {
+			return nil, fmt.Errorf("%s, query does not match: %s", err, queryMatchErr)
+		}
+		return nil, err
 	}
 	defer expected.Unlock()
 

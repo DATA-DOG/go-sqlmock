@@ -59,10 +59,7 @@ func (e *queryBasedExpectation) attemptArgMatch(args []namedValue) (err error) {
 	// catch panic
 	defer func() {
 		if e := recover(); e != nil {
-			_, ok := e.(error)
-			if !ok {
-				err = fmt.Errorf(e.(string))
-			}
+			err = fmt.Errorf("%v", e)
 		}
 	}()
 

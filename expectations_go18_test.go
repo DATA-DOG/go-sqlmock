@@ -6,6 +6,8 @@ package sqlmock
 import (
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -175,11 +177,73 @@ func (s panicConverter) ConvertValue(v interface{}) (driver.Value, error) {
 }
 
 func Test_queryBasedExpectation_attemptArgMatch(t *testing.T) {
-	e := &queryBasedExpectation{converter: new(panicConverter), args: []driver.Value{"test"}}
 	values := []driver.NamedValue{
 		{Ordinal: 1, Name: "test", Value: "test"},
 	}
-	if err := e.attemptArgMatch(values); err == nil {
-		t.Errorf("error expected")
+	for _, tc := range []struct {
+		name  string
+		value driver.Value
+		want  string
+	}{
+		{name: "string", value: "test", want: "test"},
+		{name: "error", value: errors.New("test error"), want: "test error"},
+		{name: "integer", value: 42, want: "42"},
+		{name: "percent", value: "100% mismatch", want: "100% mismatch"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("attemptArgMatch panicked: %v", r)
+				}
+			}()
+			e := &queryBasedExpectation{converter: new(panicConverter), args: []driver.Value{tc.value}}
+			if err := e.attemptArgMatch(values); err == nil || err.Error() != tc.want {
+				t.Errorf("got error %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+type int64Argument int64
+
+func (a int64Argument) Match(v driver.Value) bool {
+	return v.(int64) == int64(a)
+}
+
+func TestUnorderedArgumentsRecoverTypeMismatch(t *testing.T) {
+	for _, query := range []bool{false, true} {
+		t.Run(fmt.Sprint("query=", query), func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("matching a later expectation panicked: %v", r)
+				}
+			}()
+			db, mock, err := New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			mock.MatchExpectationsInOrder(false)
+			for _, arg := range []driver.Value{int64Argument(1), "one"} {
+				if query {
+					mock.ExpectQuery("SELECT").WithArgs(arg).WillReturnRows(NewRows([]string{"value"}).AddRow("matched"))
+				} else {
+					mock.ExpectExec("UPDATE").WithArgs(arg).WillReturnResult(NewResult(0, 1))
+				}
+			}
+			for _, arg := range []interface{}{"one", int64(1)} {
+				if query {
+					var result string
+					if err := db.QueryRow("SELECT", arg).Scan(&result); err != nil || result != "matched" {
+						t.Fatalf("query result %q, error %v", result, err)
+					}
+				} else if _, err := db.Exec("UPDATE", arg); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

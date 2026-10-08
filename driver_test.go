@@ -1,6 +1,7 @@
 package sqlmock
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -128,5 +129,17 @@ func TestNewDSN(t *testing.T) {
 func TestDuplicateNewDSN(t *testing.T) {
 	if _, _, err := NewWithDSN("sqlmock_db_1"); err == nil {
 		t.Error("expected error on NewWithDSN")
+	}
+}
+
+func TestDriverRegisteredUnderAnotherName(t *testing.T) {
+	db, mock, _ := NewWithDSN("sqlmock_issue_267")
+	defer db.Close()
+	sql.Register("sqlmock_issue_267", db.Driver())
+	other, _ := sql.Open("sqlmock_issue_267", "")
+	defer other.Close()
+	mock.ExpectExec("UPDATE products").WillReturnResult(NewResult(1, 1))
+	if _, err := other.Exec("UPDATE products SET views = 1"); err != nil {
+		t.Errorf("an error '%s' was not expected when executing through the registered driver", err)
 	}
 }

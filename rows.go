@@ -206,7 +206,14 @@ func (r *Rows) AddRows(values ...[]driver.Value) *Rows {
 func (r *Rows) FromCSVString(s string) *Rows {
 	res := strings.NewReader(strings.TrimSpace(s))
 	csvReader := csv.NewReader(res)
+	return r.FromCSVReader(csvReader)
+}
 
+// FromCSVReader build rows from csv.Reader.
+// return the same instance to perform subsequent actions.
+// Note that the number of values must match the number
+// of columns
+func (r *Rows) FromCSVReader(csvReader *csv.Reader) *Rows {
 	for {
 		res, err := csvReader.Read()
 		if err != nil {

@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -472,6 +476,102 @@ func TestCSVParserInvalidInput(t *testing.T) {
 	_ = NewRows([]string{"col1", "col2"}).FromCSVString("a,\"NULL\"\"")
 	// shouldn't reach here
 	t.Error("expected panic from parsing invalid CSV")
+}
+
+func TestCSVRowParserFromCSVReader(t *testing.T) {
+	t.Parallel()
+
+	input := strings.Join([]string{
+		`# comment row`,
+		`a|NULL|["a","b"]`,
+		` b | null | ["c"] `,
+	}, "\n")
+
+	csvReader := csv.NewReader(strings.NewReader(input))
+	csvReader.Comma = '|'
+	csvReader.LazyQuotes = true
+	csvReader.Comment = '#'
+
+	rs := NewRows([]string{"col1", "col2", "col3"}).FromCSVReader(csvReader)
+	db, mock, err := New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery("SELECT").WillReturnRows(rs)
+
+	rw, err := db.Query("SELECT")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	defer rw.Close()
+
+	if !rw.Next() {
+		t.Fatal("expected first row to be available")
+	}
+	var col1 string
+	var col2 []byte
+	var col3 string
+	var col3JSON []string
+	if err = rw.Scan(&col1, &col2, &col3); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if col1 != "a" {
+		t.Fatalf("expected col1 to be 'a', but got [%T]:%+v", col1, col1)
+	}
+	if col2 != nil {
+		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
+	}
+	if err = json.Unmarshal([]byte(col3), &col3JSON); err != nil {
+		t.Fatalf("expected valid json, but got [%T]:%+v (%v)", col3, col3, err)
+	}
+	if !reflect.DeepEqual(col3JSON, []string{"a", "b"}) {
+		t.Fatalf(`expected col3JSON to be ["a", "b"], but got [%T]:%+v`, col3JSON, col3JSON)
+	}
+
+	if !rw.Next() {
+		t.Fatal("expected second row to be available")
+	}
+	col3JSON = nil
+	if err = rw.Scan(&col1, &col2, &col3); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if col1 != "b" {
+		t.Fatalf("expected col1 to be 'b', but got [%T]:%+v", col1, col1)
+	}
+	if col2 != nil {
+		t.Fatalf("expected col2 to be nil, but got [%T]:%+v", col2, col2)
+	}
+	if err = json.Unmarshal([]byte(col3), &col3JSON); err != nil {
+		t.Fatalf("expected valid json, but got [%T]:%+v (%v)", col3, col3, err)
+	}
+	if !reflect.DeepEqual(col3JSON, []string{"c"}) {
+		t.Fatalf(`expected col3JSON to be ["c"], but got [%T]:%+v`, col3JSON, col3JSON)
+	}
+
+	if rw.Next() {
+		t.Fatal("did not expect a third row")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCSVReaderInvalidInput(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic from parsing invalid CSV")
+		}
+		msg, ok := r.(string)
+		if !ok || !strings.HasPrefix(msg, "Parsing CSV string failed:") {
+			t.Fatalf("unexpected panic value: %v", r)
+		}
+	}()
+	csvReader := csv.NewReader(strings.NewReader("a,\"NULL\"\""))
+	_ = NewRows([]string{"col1", "col2"}).FromCSVReader(csvReader)
 }
 
 func TestWrongNumberOfValues(t *testing.T) {

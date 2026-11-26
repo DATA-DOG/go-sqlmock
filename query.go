@@ -1,12 +1,21 @@
 package sqlmock
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
+	"regexp/syntax"
 	"strings"
 )
 
 var re = regexp.MustCompile("\\s+")
+
+// isRegexpSyntaxError reports whether err was caused by an invalid regular
+// expression, meaning the expected SQL statement itself is malformed.
+func isRegexpSyntaxError(err error) bool {
+	var syntaxErr *syntax.Error
+	return errors.As(err, &syntaxErr)
+}
 
 // strip out new lines and trim spaces
 func stripQuery(q string) (s string) {
@@ -42,7 +51,7 @@ func (f QueryMatcherFunc) Match(expectedSQL, actualSQL string) error {
 // QueryMatcherRegexp is the default SQL query matcher
 // used by sqlmock. It parses expectedSQL to a regular
 // expression and attempts to match actualSQL.
-var QueryMatcherRegexp QueryMatcher = QueryMatcherFunc(func(expectedSQL, actualSQL string) error {	
+var QueryMatcherRegexp QueryMatcher = QueryMatcherFunc(func(expectedSQL, actualSQL string) error {
 	expect := stripQuery(expectedSQL)
 	actual := stripQuery(actualSQL)
 	if actual != "" && expect == "" {

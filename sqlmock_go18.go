@@ -218,6 +218,9 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 		if qr, ok := next.(*ExpectedQuery); ok {
 			if err := c.queryMatcher.Match(qr.expectSQL, query); err != nil {
 				next.Unlock()
+				if isRegexpSyntaxError(err) {
+					return nil, fmt.Errorf("Query: invalid expected SQL regular expression %q: %v", qr.expectSQL, err)
+				}
 				continue
 			}
 			if err := qr.attemptArgMatch(args); err == nil {
@@ -239,6 +242,9 @@ func (c *sqlmock) query(query string, args []driver.NamedValue) (*ExpectedQuery,
 	defer expected.Unlock()
 
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		if isRegexpSyntaxError(err) {
+			return nil, fmt.Errorf("Query: invalid expected SQL regular expression %q: %v", expected.expectSQL, err)
+		}
 		return nil, fmt.Errorf("Query: %v", err)
 	}
 
@@ -301,6 +307,9 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 		if exec, ok := next.(*ExpectedExec); ok {
 			if err := c.queryMatcher.Match(exec.expectSQL, query); err != nil {
 				next.Unlock()
+				if isRegexpSyntaxError(err) {
+					return nil, fmt.Errorf("ExecQuery: invalid expected SQL regular expression %q: %v", exec.expectSQL, err)
+				}
 				continue
 			}
 
@@ -321,6 +330,9 @@ func (c *sqlmock) exec(query string, args []driver.NamedValue) (*ExpectedExec, e
 	defer expected.Unlock()
 
 	if err := c.queryMatcher.Match(expected.expectSQL, query); err != nil {
+		if isRegexpSyntaxError(err) {
+			return nil, fmt.Errorf("ExecQuery: invalid expected SQL regular expression %q: %v", expected.expectSQL, err)
+		}
 		return nil, fmt.Errorf("ExecQuery: %v", err)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1176,6 +1177,40 @@ func TestNewRows(t *testing.T) {
 	r := mock.NewRows(columns)
 	if len(r.cols) != len(columns) || r.cols[0] != columns[0] || r.cols[1] != columns[1] {
 		t.Errorf("expecting to create a row with columns %v, actual columns are %v", r.cols, columns)
+	}
+}
+
+func TestQueryReportsInvalidExpectedRegexp(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery("SELECT (")
+	_, err = db.Query("SELECT 1")
+	if err == nil {
+		t.Fatal("expected an error for an invalid expected SQL regular expression")
+	}
+	if !strings.Contains(err.Error(), "invalid expected SQL regular expression") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestExecReportsInvalidExpectedRegexp(t *testing.T) {
+	db, mock, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec("UPDATE (")
+	_, err = db.Exec("UPDATE t SET x = 1")
+	if err == nil {
+		t.Fatal("expected an error for an invalid expected SQL regular expression")
+	}
+	if !strings.Contains(err.Error(), "invalid expected SQL regular expression") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
